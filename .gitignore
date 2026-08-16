@@ -1,0 +1,25 @@
+# Secrets — never commit
+.env
+config.json
+
+# Caches
+__pycache__/
+*.py[cod]
+.sec_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Data: regenerable from SEC/market sources, and large
+data/
+!data/.gitkeep
+
+# Virtualenvs
+.venv/
+venv/
+env/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

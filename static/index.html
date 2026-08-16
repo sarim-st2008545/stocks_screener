@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automated Halal Swing Signals & Backtester</title>
+    <meta name="description" content="Automated Shari'ah Compliant Swing Trading System with Actionable Buy/Sell Signals, Target Prices, Stop Loss, and Strategy Backtester.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Navigation Header -->
+    <header class="app-header">
+        <div class="header-container">
+            <div class="logo">
+                <span class="logo-icon">🎯</span>
+                <div class="logo-text">
+                    <h1>Halal Trade Signals</h1>
+                    <span class="sub-title">Automated Swing Engine</span>
+                </div>
+            </div>
+
+            <nav class="nav-tabs">
+                <button class="nav-tab active" data-tab="signals">
+                    <span class="nav-icon">⚡</span> Live Signals
+                </button>
+                <button class="nav-tab" data-tab="backtest">
+                    <span class="nav-icon">📊</span> Strategy Backtester
+                </button>
+                <button class="nav-tab" data-tab="trends">
+                    <span class="nav-icon">🔥</span> Sector Hikes
+                </button>
+            </nav>
+
+            <div class="header-status">
+                <div class="status-pill" id="telegram-status">
+                    <span class="dot yellow"></span> Telegram Unconfigured
+                </div>
+                <div class="status-pill" id="llm-status">
+                    <span class="dot green"></span> AI Ready
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-container">
+        <!-- 1. LIVE BUY / SELL SIGNALS TAB -->
+        <section id="tab-signals" class="tab-content active">
+            <div class="section-header">
+                <div>
+                    <h2>Active Swing Trading Signals</h2>
+                    <p>Calculated automatically across Shari'ah-compliant stocks based on momentum breakouts, SEC Form 4 insider buying, and ATR risk levels.</p>
+                </div>
+                <button class="btn btn-primary" onclick="loadSignals()">Refresh Signals 🔄</button>
+            </div>
+
+            <!-- Signal Cards Grid -->
+            <div class="signals-grid" id="signals-cards-grid">
+                <div class="loading">Scanning market for high-probability swing setups...</div>
+            </div>
+        </section>
+
+        <!-- 2. STRATEGY BACKTESTER TAB -->
+        <section id="tab-backtest" class="tab-content">
+            <div class="section-header">
+                <div>
+                    <h2>Strategy Backtest Simulator</h2>
+                    <p>Test the swing trading signal strategy against past historical stock data to verify Win Rate %, Total Return %, and Drawdown before trading real money.</p>
+                </div>
+            </div>
+
+            <div class="backtest-controls card-panel">
+                <div class="control-group">
+                    <label>Initial Capital ($):</label>
+                    <input type="number" id="backtest-capital" value="10000" step="1000" min="1000">
+                </div>
+                <div class="control-group">
+                    <label>Historical Horizon:</label>
+                    <select id="backtest-period">
+                        <option value="1y" selected>1 Year</option>
+                        <option value="6mo">6 Months</option>
+                        <option value="2y">2 Years</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="runBacktest()">Run Backtest Simulation 🚀</button>
+            </div>
+
+            <!-- Backtest Results Summary -->
+            <div class="stats-grid" id="backtest-stats-grid" style="display: none; margin-top: 1.5rem;">
+                <div class="stat-card">
+                    <div class="stat-icon green-glow">💰</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Final Portfolio Value</span>
+                        <h3 id="bt-final-val">$0</h3>
+                        <span class="stat-sub" id="bt-net-profit">Net Return: 0%</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon blue-glow">🎯</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Strategy Win Rate</span>
+                        <h3 id="bt-win-rate">0%</h3>
+                        <span class="stat-sub" id="bt-trade-counts">0 Wins / 0 Total</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon gold-glow">⚖️</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Profit Factor</span>
+                        <h3 id="bt-profit-factor">0.0</h3>
+                        <span class="stat-sub">Gross Wins / Gross Losses</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon purple-glow">🛡️</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Max Drawdown</span>
+                        <h3 id="bt-max-drawdown">0%</h3>
+                        <span class="stat-sub">Peak to Trough Risk</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trade History Log Table -->
+            <div class="card-panel" style="margin-top: 1.5rem;">
+                <div class="panel-header">
+                    <h3>📜 Simulated Trade History Log</h3>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Ticker</th>
+                                <th>Entry Date</th>
+                                <th>Exit Date</th>
+                                <th>Buy Price</th>
+                                <th>Sell Price</th>
+                                <th>Profit / Loss ($)</th>
+                                <th>Return %</th>
+                                <th>Result</th>
+                            </tr>
+                        </thead>
+                        <tbody id="backtest-trade-log-body">
+                            <tr><td colspan="8" class="loading">Click 'Run Backtest Simulation' above to test strategy on past market data.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. SECTOR HIKES & TRENDS TAB -->
+        <section id="tab-trends" class="tab-content">
+            <div class="section-header">
+                <div>
+                    <h2>Global Sector Hikes &amp; Market Themes</h2>
+                    <p>High-momentum global sectors (e.g. Memory Chips supercycle, AI Hardware) generating frequent swing setups.</p>
+                </div>
+            </div>
+
+            <div class="trends-container" id="trends-cards-container">
+                <div class="loading">Loading sector trends...</div>
+            </div>
+        </section>
+    </main>
+
+    <!-- AI BRIEF MODAL -->
+    <div class="modal-overlay" id="brief-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span class="modal-icon">🤖</span>
+                    <h3 id="modal-ticker-title">AI Swing Trade Analysis</h3>
+                </div>
+                <button class="modal-close" onclick="closeBriefModal()">✕</button>
+            </div>
+            <div class="modal-body" id="brief-modal-body">
+                <div class="loading">Generating AI trade brief...</div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeBriefModal()">Close</button>
+                <button class="btn btn-primary" onclick="sendBriefToTelegram()">Push Signal to Telegram 📱</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
