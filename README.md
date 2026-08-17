@@ -619,13 +619,15 @@ whole net worth; if it is, the satellite should come down.
   summing to no more than 50%.
 - **Max per sub-segment: 20%** — because NVDA + AMD + TSM is one bet on AI silicon demand,
   not three independent ones.
-- **Conviction weighting via fractional Kelly.** Full Kelly assumes edges are known
-  exactly; estimation error makes the computed fraction too large, producing drawdowns far
-  worse than modelled. Practice uses fractions — **half-Kelly** (Thorp; retains ~75% of
-  growth at much lower variance) or **quarter-Kelly** (~50% of growth at roughly 25% of
-  volatility). This system defaults to **quarter-Kelly**, floored and capped by the
-  position limits above. Given how imprecisely a fundamental score maps to a probabilistic
-  "edge," the conservative fraction is the honest one.
+- **Conviction weighting: a bounded score tilt, not literal Kelly.** Kelly requires a win
+  probability and a payoff ratio. This system produces neither — a composite percentile is a
+  *ranking*, and converting one into a probability would manufacture precision that does not
+  exist. So each name takes equal weight tilted by its score, capped so the best-ranked
+  position is at most twice the weakest, which is no wider a spread than quarter-Kelly would
+  give from any plausible edge estimate. Conservative by construction, because the inputs do
+  not support anything sharper. (Half-Kelly retains ~75% of full-Kelly growth at much lower
+  variance; quarter-Kelly ~50% at roughly 25% of the volatility — the reason fractions are
+  standard practice in the first place.)
 - **Minimum position $25**, to keep positions meaningful relative to costs.
 
 ### Rebalancing
@@ -858,7 +860,7 @@ Each phase ships something testable. No phase starts before the one below it is 
 | **7. Smart money** ✅ | `holdings_13f.py`, `smart_money.py` — EDGAR 13F ingestion, CIK and CUSIP resolution, quarter diffs, conviction-weighted clusters | **Done.** Reproduces Coatue's Q2 2026 book ($50.9bn) from live filings; conviction weighting cut spurious clusters from 5 to 1 |
 | **8. Events** ✅ | `events.py` — daily-index discovery, Form 4 with joint-filing and split-lot handling, 8-K item rating, insider clusters, quality-ranked feed | **Done.** All free from EDGAR. Surfaced Intel's CEO buying $10.0M of his own stock. News feed deliberately skipped — see below |
 | **9. Signals** ✅ | `signals.py` — four gates, decision matrix, evidence and falsification per call | **Done.** Current output: no buys, 23 HOLD, 14 AVOID, 3 EXIT. The no-action policy fires as configured |
-| **10. Portfolio** | `portfolio.py` — ledger, quarter-Kelly sizing, rebalancing, thesis tracking | Simulates a $1,000 account end-to-end; limits provably enforced |
+| **10. Portfolio** ✅ | `portfolio.py` — ledger with thesis and falsification per position, bounded score-tilt sizing, position and segment caps, rebalancing bands, breach detection | **Done.** Fresh $1,000 wallet plans to $550 VTI / $200 SOXX / $150 GLD / $100 cash. Literal Kelly rejected — see §9 |
 | **11. Backtest** | `backtest.py` — PIT-correct, survivorship-free, walk-forward, full metrics | **Stage 1 gate cleared or strategy revised** |
 | **12. Dashboard** | Local web interface | Every number on screen traceable to its source |
 | **13. Paper trading** | `paper.py` — forward-test runner and logging | **Stage 2 gate cleared** |
