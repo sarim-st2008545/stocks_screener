@@ -90,8 +90,18 @@ altman:
       equity_to_total_liabilities: 1.05
     safe_above: 2.6
     distress_below: 1.1
+  # Which variant applies is a judgement, made from measured manufacturing
+  # intensity rather than a hardcoded ticker list, and recorded per company.
+  variant_selection:
+    basis: judgement
+    # Net PP&E as a share of total assets. Above this a filer has a genuine
+    # manufacturing asset base (IDMs, foundries), where the original Z's asset
+    # turnover term is defensible. Below it, Z'' is correct: the turnover term
+    # unfairly penalises asset-light designers and software.
+    manufacturing_ppe_to_assets: 0.20
+
   # Original Z, for companies with genuine manufacturing asset bases (IDMs,
-  # foundries). Variant selection is recorded per company.
+  # foundries). Requires market value of equity, so it needs a market cap.
   z_original:
     coefficients:
       working_capital_to_assets: 1.2

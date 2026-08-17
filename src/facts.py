@@ -396,6 +396,70 @@ class FactSet:
         """
         return {c: self.has(c) for c in concepts}
 
+    def with_horizon(self, years: float) -> "FactSet":
+        """The same point-in-time view, but willing to look further back.
+
+        The staleness cutoffs exist to stop an abandoned tag from masquerading as
+        a current figure. That is the right default, and it caps visible income
+        history at roughly two and a half years — which silently blocks
+        multi-year trend work such as "margin against its own five-year range".
+
+        Relaxing the horizon is safe precisely because it does not touch the
+        as_of gate: nothing filed after as_of becomes visible, so no look-ahead
+        is introduced. Only deliberately historical requests should use it.
+        """
+        days = int(years * 365)
+        clone = FactSet.__new__(FactSet)
+        clone._payload = self._payload
+        clone._taxonomies = self._taxonomies
+        clone.as_of = self.as_of
+        clone.max_instant_age_days = max(self.max_instant_age_days, days)
+        clone.max_duration_age_days = max(self.max_duration_age_days, days)
+        clone.reporting_currency = self.reporting_currency
+        clone._cache = {}
+        clone.excluded_future_facts = 0
+        return clone
+
+    # -- prior periods ------------------------------------------------------
+    #
+    # Year-over-year tests need two fiscal years that were BOTH knowable at
+    # as_of. That is not the same as comparing a current view against a view
+    # built a year ago: the latter mixes "what is true now" with "what we knew
+    # then" and quietly reintroduces the look-ahead the as_of gate removes.
+
+    def instant_near(
+        self,
+        concepts: list[str],
+        target: date,
+        tolerance_days: int = 120,
+    ) -> Fact | None:
+        """Balance-sheet value closest to `target`, within tolerance."""
+        best: Fact | None = None
+        best_gap: int | None = None
+        for rank, concept in enumerate(concepts):
+            for fact in self.facts_for(concept):
+                if not fact.is_instant:
+                    continue
+                gap = abs((fact.end - target).days)
+                if gap > tolerance_days:
+                    continue
+                if best_gap is None or (gap, rank) < (best_gap, 0):
+                    best, best_gap = fact, gap
+        return best
+
+    def ttm_near(
+        self,
+        concepts: list[str],
+        target: date,
+        tolerance_days: int = 120,
+    ) -> Window | None:
+        """TTM window whose end is closest to `target`, within tolerance."""
+        candidates = self.ttm_candidates_best(concepts)
+        eligible = [w for w in candidates if abs((w.end - target).days) <= tolerance_days]
+        if not eligible:
+            return None
+        return min(eligible, key=lambda w: (abs((w.end - target).days), w.basis != "annual"))
+
     # -- share counts -------------------------------------------------------
 
     # Cover-page share count first: it is the most recent figure a filer
@@ -407,7 +471,7 @@ class FactSet:
         ("us-gaap", "WeightedAverageNumberOfDilutedSharesOutstanding"),
     )
 
-    def shares_outstanding(self) -> Fact | None:
+    def shares_outstanding(self, near: date | None = None) -> Fact | None:
         """Point-in-time share count, in shares rather than currency.
 
         Returns None rather than a guess for multi-class filers. SEC's
@@ -421,8 +485,16 @@ class FactSet:
             facts = self._facts_in_unit(taxonomy, concept, "shares")
             if not facts:
                 continue
-            latest_end = max(f.end for f in facts)
-            current = [f for f in facts if f.end == latest_end]
+            # `near` anchors to a past period so year-over-year dilution tests
+            # compare two different counts rather than the latest against itself.
+            if near is not None:
+                eligible = [f for f in facts if abs((f.end - near).days) <= 180]
+                if not eligible:
+                    continue
+                target_end = min(eligible, key=lambda f: abs((f.end - near).days)).end
+            else:
+                target_end = max(f.end for f in facts)
+            current = [f for f in facts if f.end == target_end]
             # Several same-period values with no dimension labels means multiple
             # share classes. Summing them would be a guess.
             if len({round(f.value) for f in current}) > 1:

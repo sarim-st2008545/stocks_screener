@@ -22,7 +22,7 @@ debt is not a company without debt.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 from typing import Any, Iterable
 
 from src.facts import FactSet, Window, align_windows
@@ -61,7 +61,12 @@ BALANCE_CONCEPTS: dict[str, list[str]] = {
         "ReceivablesNetCurrent",
     ],
     "retained_earnings": ["RetainedEarningsAccumulatedDeficit"],
-    "ppe_net": ["PropertyPlantAndEquipmentNet"],
+    # Micron abandoned `PropertyPlantAndEquipmentNet` for the finance-lease
+    # combined tag, so the archetypal fab owner reported no PP&E at all.
+    "ppe_net": [
+        "PropertyPlantAndEquipmentNet",
+        "PropertyPlantAndEquipmentAndFinanceLeaseRightOfUseAssetAfterAccumulatedDepreciationAndAmortization",
+    ],
     "goodwill": ["Goodwill"],
 }
 
@@ -226,18 +231,25 @@ class Fundamentals:
     stated here because the choice materially affects ROE and ROIC.
     """
 
-    def __init__(self, view: FactSet, ticker: str = ""):
+    def __init__(self, view: FactSet, ticker: str = "", anchor_end: date | None = None):
         self.view = view
         self.ticker = ticker.upper()
         self.as_of = view.as_of
         self.currency = view.reporting_currency
+        # When set, every figure resolves to the period closest to this date
+        # instead of the latest available. Used for year-over-year comparisons,
+        # where both years must be knowable at the same as_of.
+        self.anchor_end = anchor_end
         self._notes: list[str] = []
 
     # -- resolution helpers -------------------------------------------------
 
     def _instant(self, key: str) -> LineItem:
         concepts = BALANCE_CONCEPTS.get(key, [])
-        fact = self.view.instant_first(concepts)
+        if self.anchor_end is not None:
+            fact = self.view.instant_near(concepts, self.anchor_end)
+        else:
+            fact = self.view.instant_first(concepts)
         if fact is None:
             return _missing(key)
         return LineItem(
@@ -251,7 +263,10 @@ class Fundamentals:
     def _instant_max(self, key: str) -> LineItem:
         """For pools where overlapping tags would double-count if summed."""
         concepts = BALANCE_CONCEPTS.get(key, [])
-        fact = self.view.instant_max(concepts)
+        if self.anchor_end is not None:
+            fact = self.view.instant_near(concepts, self.anchor_end)
+        else:
+            fact = self.view.instant_max(concepts)
         if fact is None:
             return _missing(key)
         return LineItem(
@@ -259,7 +274,11 @@ class Fundamentals:
         )
 
     def _ttm(self, table: dict[str, list[str]], key: str) -> LineItem:
-        window = self.view.ttm(table.get(key, []))
+        concepts = table.get(key, [])
+        if self.anchor_end is not None:
+            window = self.view.ttm_near(concepts, self.anchor_end)
+        else:
+            window = self.view.ttm(concepts)
         if window is None:
             return _missing(key)
         return LineItem(
@@ -273,7 +292,58 @@ class Fundamentals:
         )
 
     def _ttm_windows(self, table: dict[str, list[str]], key: str) -> list[Window]:
-        return self.view.ttm_candidates_best(table.get(key, []))
+        windows = self.view.ttm_candidates_best(table.get(key, []))
+        if self.anchor_end is None:
+            return windows
+        # Restrict to the anchored period so paired ratios stay on one year.
+        return [w for w in windows if abs((w.end - self.anchor_end).days) <= 120]
+
+    # -- period navigation --------------------------------------------------
+
+    def latest_period_end(self) -> date | None:
+        """End date of the most recent income-statement period available."""
+        for key in ("revenue", "net_income"):
+            window = self.view.ttm(INCOME_CONCEPTS[key])
+            if window is not None:
+                return window.end
+        assets = self.view.instant_first(BALANCE_CONCEPTS["assets"])
+        return assets.end if assets else None
+
+    def prior_year(self) -> "Fundamentals | None":
+        """The same company one fiscal year earlier, as known at the same as_of.
+
+        Returns None when there is no earlier period to compare against — a
+        recent IPO cannot have year-over-year signals, and inventing them would
+        be worse than reporting fewer.
+        """
+        current = self.anchor_end or self.latest_period_end()
+        if current is None:
+            return None
+        target = current - timedelta(days=365)
+        # Reaching back past the default staleness horizon is the whole point
+        # here, and it is safe: the as_of gate is untouched, so nothing filed
+        # later becomes visible.
+        horizon = max(3.0, ((self.as_of - target).days / 365) + 1.5)
+        prior = Fundamentals(self.view.with_horizon(horizon), self.ticker, anchor_end=target)
+        if prior.latest_period_end() is None and not prior.assets.present:
+            return None
+        # Guard against resolving back onto the same period.
+        if prior.revenue.present and prior.revenue.period_end == current:
+            return None
+        return prior
+
+    @property
+    def shares_outstanding(self) -> LineItem:
+        fact = self.view.shares_outstanding(near=self.anchor_end)
+        if fact is None:
+            return _missing("shares_outstanding", "multi-class or untagged")
+        return LineItem(
+            "shares_outstanding",
+            fact.value,
+            source=fact.concept,
+            period_end=fact.end,
+            filed=fact.filed,
+        )
 
     # -- balance sheet ------------------------------------------------------
 
@@ -606,24 +676,56 @@ class Fundamentals:
 
     @property
     def invested_capital(self) -> LineItem:
-        """Total debt plus equity less cash — the capital actually at work."""
+        """Debt plus equity less cash — the capital actually at work.
+
+        Subtracting cash is standard, but it breaks for companies holding more
+        cash than equity: the denominator collapses toward zero and ROIC
+        explodes. Palantir produced 382% that way, which is an artifact of the
+        subtraction rather than a return anyone earned.
+
+        So when the cash-adjusted base is implausibly small against revenue, the
+        unadjusted total-capital base is used instead and the substitution is
+        recorded. Reporting a wrong-by-an-order-of-magnitude number would be
+        worse than reporting a more conservative one and saying so.
+        """
         debt, equity, cash = self.total_debt, self.equity, self.cash_and_investments
         if not equity.present:
             return _missing("invested_capital")
-        total = equity.value
-        parts = [equity.source]
-        if debt.present:
-            total += debt.value
-            parts.append(debt.source)
-        if cash.present:
-            total -= cash.value
-            parts.append("- cash & investments")
-        if total <= 0:
-            return _missing("invested_capital", "non-positive invested capital")
+
+        total_capital = equity.value + (debt.value if debt.present else 0.0)
+        parts = [equity.source] + ([debt.source] if debt.present else [])
+        if total_capital <= 0:
+            return _missing("invested_capital", "non-positive total capital")
+
+        if not cash.present:
+            return LineItem(
+                "invested_capital",
+                total_capital,
+                source=" + ".join(parts),
+                derived=True,
+                period_end=equity.period_end,
+            )
+
+        adjusted = total_capital - cash.value
+        revenue = self.revenue
+        floor = 0.20 * revenue.value if revenue.present and revenue.value > 0 else 0.0
+        if adjusted <= 0 or adjusted < floor:
+            self._notes.append(
+                "invested capital excludes the cash adjustment: net cash left a "
+                "denominator too small for a meaningful ROIC"
+            )
+            return LineItem(
+                "invested_capital",
+                total_capital,
+                source=" + ".join(parts) + " (cash not deducted)",
+                derived=True,
+                period_end=equity.period_end,
+            )
+
         return LineItem(
             "invested_capital",
-            total,
-            source=" + ".join(parts),
+            adjusted,
+            source=" + ".join(parts) + " - cash & investments",
             derived=True,
             period_end=equity.period_end,
         )

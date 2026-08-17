@@ -370,11 +370,25 @@ class TestROIC:
         assert f.roic is not None
         assert any("statutory" in n for n in f.coverage()["notes"])
 
-    def test_non_positive_invested_capital_yields_no_roic(self):
+    def test_net_cash_falls_back_to_total_capital(self):
+        """Subtracting cash from a net-cash company collapses the denominator
+        and inflates ROIC — Palantir produced 382% that way. The unadjusted
+        base is used instead, and the substitution is recorded."""
         f = fundamentals(
             annual("OperatingIncomeLoss", 100e9),
+            annual("Revenues", 500e9),
             instant("StockholdersEquity", 10e9),
             instant("CashAndCashEquivalentsAtCarryingValue", 50e9),
+        )
+        assert f.invested_capital.value == pytest.approx(10e9)
+        assert "cash not deducted" in f.invested_capital.source
+        assert any("net cash" in n for n in f.coverage()["notes"])
+
+    def test_non_positive_total_capital_yields_no_roic(self):
+        """Negative equity with no debt leaves no capital base at all."""
+        f = fundamentals(
+            annual("OperatingIncomeLoss", 100e9),
+            instant("StockholdersEquity", -5e9),
         )
         assert f.invested_capital.present is False
         assert f.roic is None
