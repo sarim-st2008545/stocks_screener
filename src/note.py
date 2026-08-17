@@ -21,6 +21,7 @@ from datetime import date
 from typing import Any
 
 from src import fundamentals as fundamentals_mod
+from src import cycle as cycle_mod
 from src import prices, quality, universe, valuation as valuation_mod
 from src.facts import FactSet
 from src.sec_client import SECClient
@@ -39,6 +40,7 @@ class Note:
     market_cap: float | None
     price: float | None
     valuation: "valuation_mod.Valuation | None" = None
+    cycle: "cycle_mod.CyclePosition | None" = None
     error: str | None = None
 
 
@@ -78,7 +80,10 @@ def build(ticker: str, as_of: date | None = None, wacc: float | None = None) -> 
         f, market_cap=market_cap, wacc=wacc if wacc is not None else valued.cost_of_capital.wacc
     )
 
-    return Note(ticker, as_of, constituent, f, assessment, market_cap, price, valued)
+    position = cycle_mod.assess(f, cyclical_segment=cycle_mod.is_cyclical(ticker))
+    return Note(
+        ticker, as_of, constituent, f, assessment, market_cap, price, valued, position
+    )
 
 
 def _money(value: float | None, currency: str = "USD") -> str:
@@ -220,11 +225,36 @@ def render(note: Note) -> str:
     for label, verdict in a.balance_sheet.items():
         out.append(f"      {label:24}{verdict}")
 
+    # -- cycle --------------------------------------------------------------
+    cp = note.cycle
+    if cp is not None:
+        out.append("")
+        out.append("5. CAPITAL-CYCLE POSITION")
+        out.append(THIN)
+        out.append(f"  position         {cp.position}")
+        out.append(f"  capital profile  {cp.capex_profile}")
+        repeatable = cp.earnings_repeatable
+        if repeatable is not None:
+            out.append(
+                "  trailing earnings look "
+                + ("repeatable" if repeatable else "NOT repeatable as a valuation basis")
+            )
+        caveat = cp.valuation_caveat
+        if caveat:
+            out.append(f"  CAVEAT           {caveat}")
+        out.append("")
+        for s_ in (cp.gross_margin, cp.operating_margin, cp.inventory_days, cp.capex_intensity):
+            out.append(f"      {s_.label()}")
+        for line in cp.evidence:
+            out.append(f"      evidence: {line}")
+        for line in cp.notes:
+            out.append(f"      note: {line}")
+
     # -- valuation ----------------------------------------------------------
     v = note.valuation
     if v is not None:
         out.append("")
-        out.append("5. VALUATION")
+        out.append("6. VALUATION")
         out.append(THIN)
         coc = v.cost_of_capital
         out.append(f"  {coc.label()}")
@@ -271,7 +301,7 @@ def render(note: Note) -> str:
     # -- data quality -------------------------------------------------------
     coverage = f.coverage()
     out.append("")
-    out.append("6. DATA QUALITY")
+    out.append("7. DATA QUALITY")
     out.append(THIN)
     out.append(
         f"  line items resolved   {coverage['line_items_present']}/{coverage['line_items_total']}"
@@ -293,10 +323,9 @@ def render(note: Note) -> str:
 
     # -- not yet built ------------------------------------------------------
     out.append("")
-    out.append("7. NOT YET BUILT  (named so this note is not mistaken for complete)")
+    out.append("8. NOT YET BUILT  (named so this note is not mistaken for complete)")
     out.append(THIN)
     for phase, item in (
-        ("Phase 5", "cycle position - is this peak or trough margin for this company"),
         ("Phase 6", "composite score - percentile rank against the investable pool"),
         ("Phase 7", "smart money - 13F institutional positioning as corroboration"),
         ("Phase 8", "events - 8-K, Form 4 insider buying, earnings calendar"),

@@ -232,6 +232,13 @@ cycle:
   margin_percentile_peak_above: 0.80
   margin_percentile_trough_below: 0.20
 
+  # A percentile needs a range wide enough to mean something. Microsoft's gross
+  # margin moved between 68% and 70% over six years; on a 2-point spread the
+  # percentile lands at 0% or 100% on noise alone, and the screen called a
+  # perfectly stable business a cycle trough. Below this spread there is no
+  # cycle to place and the company is reported as stable.
+  min_margin_spread: 0.06
+
 # ---------------------------------------------------------------------------
 # Composite scoring (README §5.7)
 # ---------------------------------------------------------------------------
