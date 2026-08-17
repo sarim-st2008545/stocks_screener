@@ -169,6 +169,56 @@ def regress(strategy: list[float], benchmark: list[float]) -> tuple[float | None
 # ---------------------------------------------------------------------------
 
 
+def blended_benchmark(dates: list[date], initial: float) -> list[tuple[date, float]]:
+    """A passive portfolio holding the same sleeves at the same weights.
+
+    The right comparison for judging this strategy, and the one the original gate
+    got wrong. Measured beta against SOXX is 0.44 because the strategy holds 20%
+    of the sector while SOXX holds 100%, so comparing the two tests allocation far
+    more than selection. This blend removes that confound and answers the question
+    that decides whether the analysis is worth doing at all: does it beat simply
+    holding these sleeves passively?
+
+    Rebalanced on the strategy's own schedule, so the comparison is not quietly
+    flattered by different rebalancing luck, and its cash sleeve earns the
+    risk-free rate rather than nothing.
+    """
+    weights = {
+        config.get("portfolio.sleeves.core_market.instruments")[0]:
+            config.get("portfolio.sleeves.core_market.target_pct"),
+        config.get("portfolio.sleeves.satellite_ai_infra.etf_instruments")[0]:
+            config.get("portfolio.sleeves.satellite_ai_infra.target_pct"),
+        config.get("portfolio.sleeves.gold.instruments")[0]:
+            config.get("portfolio.sleeves.gold.target_pct"),
+    }
+    cash_weight = config.get("portfolio.sleeves.cash.target_pct")
+
+    histories = {t: prices.load(t) for t in weights}
+    if any(h is None for h in histories.values()) or not dates:
+        return []
+
+    rebalances = set(rebalance_dates(dates[0], dates[-1]))
+    daily_rf = (1.04 ** (1 / TRADING_DAYS)) - 1
+
+    shares: dict[str, float] = {}
+    cash = 0.0
+    series: list[tuple[date, float]] = []
+    value = float(initial)
+
+    for when in dates:
+        quotes = {t: histories[t].adjusted_close(when) for t in weights}
+        if any(q is None or q <= 0 for q in quotes.values()):
+            continue
+        if shares:
+            cash *= 1 + daily_rf
+            value = cash + sum(shares.get(t, 0.0) * quotes[t] for t in weights)
+        if not shares or when in rebalances:
+            shares = {t: (value * w) / quotes[t] for t, w in weights.items()}
+            cash = value * cash_weight
+        series.append((when, value))
+    return series
+
+
 def rebalance_dates(start: date, end: date) -> list[date]:
     out: list[date] = []
     for year in range(start.year, end.year + 1):
@@ -226,8 +276,18 @@ def simulate(
     initial: float | None = None,
     client: SECClient | None = None,
     cache_path: Path | None = None,
+    mode: str = "portfolio",
 ) -> BacktestRun:
-    """Walk the strategy forward through history, one rebalance at a time."""
+    """Walk the strategy forward through history, one rebalance at a time.
+
+    `mode="portfolio"` runs the real thing: sleeves, caps, cash.
+
+    `mode="selection"` isolates the stock picking. It holds the chosen names at
+    equal weight with the whole balance, falling back to the sector ETF whenever
+    nothing qualifies, so it stays fully sector-exposed and is directly comparable
+    to SOXX. That answers the narrow question the portfolio run cannot: do the
+    picks beat the index, independently of how much of the sector is held.
+    """
     client = client or SECClient()
     initial = initial or config.get("portfolio.wallet.size")
     slippage = config.get("portfolio.execution.assumed_slippage_bps") / 10_000
@@ -293,24 +353,34 @@ def simulate(
                 run.names_held[ticker] = run.names_held.get(ticker, 0) + 1
 
         # -- target weights -------------------------------------------------
-        wanted: dict[str, tuple[float, str]] = {
-            core: (targets["core_market"], "core_market"),
-            gold: (targets["gold"], "gold"),
-        }
-        satellite = targets["satellite_ai_infra"]
-        if picks:
-            wanted[sector] = (satellite * etf_share, "satellite_ai_infra")
-            names_budget = satellite * (1 - etf_share)
-            # Equal weight within the picked names, capped per name.
-            cap = config.get("portfolio.limits.max_single_name_pct_of_portfolio")
-            each = min(names_budget / len(picks), cap)
-            for ticker, _score in picks:
-                wanted[ticker] = (each, "satellite_ai_infra")
+        wanted: dict[str, tuple[float, str]] = {}
+        if mode == "selection":
+            # Fully sector-exposed either way, so the only difference from SOXX is
+            # which names are held.
+            if picks:
+                each = 1.0 / len(picks)
+                wanted = {t: (each, "selection") for t, _ in picks}
+            else:
+                wanted = {sector: (1.0, "selection")}
         else:
-            # No qualifying name, so the sleeve is held through the sector ETF —
-            # the strategic allocation stands even when single-stock selection
-            # finds nothing.
-            wanted[sector] = (satellite, "satellite_ai_infra")
+            wanted = {
+                core: (targets["core_market"], "core_market"),
+                gold: (targets["gold"], "gold"),
+            }
+            satellite = targets["satellite_ai_infra"]
+            if picks:
+                wanted[sector] = (satellite * etf_share, "satellite_ai_infra")
+                names_budget = satellite * (1 - etf_share)
+                # Equal weight within the picked names, capped per name.
+                cap = config.get("portfolio.limits.max_single_name_pct_of_portfolio")
+                each = min(names_budget / len(picks), cap)
+                for ticker, _score in picks:
+                    wanted[ticker] = (each, "satellite_ai_infra")
+            else:
+                # No qualifying name, so the sleeve is held through the sector ETF
+                # — the strategic allocation stands even when single-stock
+                # selection finds nothing.
+                wanted[sector] = (satellite, "satellite_ai_infra")
 
         # -- rebalance to target --------------------------------------------
         held_now = {h.ticker: h for h in holdings}
@@ -387,6 +457,10 @@ def simulate(
         run.notes.append("daily marking unavailable; metrics fall back to rebalance dates")
 
     # -- benchmarks ---------------------------------------------------------
+    blend_series = blended_benchmark([d for d, _ in run.equity], float(initial))
+    if len(blend_series) >= 3:
+        run.benchmarks["BLEND"] = blend_series
+
     for name in (
         config.get("universe.benchmark.primary"),
         config.get("universe.benchmark.secondary"),
@@ -702,6 +776,12 @@ def main() -> None:
     parser.add_argument("--tickers", nargs="*")
     parser.add_argument("--capital", type=float)
     parser.add_argument("--save", action="store_true")
+    parser.add_argument(
+        "--mode",
+        default="portfolio",
+        choices=("portfolio", "selection"),
+        help="portfolio runs the real sleeves; selection isolates the stock picks",
+    )
     args = parser.parse_args()
 
     run = simulate(
@@ -709,12 +789,14 @@ def main() -> None:
         end=date.fromisoformat(args.end),
         tickers=args.tickers,
         initial=args.capital,
+        mode=args.mode,
     )
     text = report(run)
     print(text)
     if args.save:
         RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-        path = RESULTS_DIR / f"{args.start}_{args.end}.txt"
+        suffix = "" if args.mode == "portfolio" else f"_{args.mode}"
+        path = RESULTS_DIR / f"{args.start}_{args.end}{suffix}.txt"
         path.write_text(text, encoding="utf-8")
         print(f"\nwritten to {path}")
 
