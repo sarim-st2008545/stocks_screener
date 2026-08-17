@@ -857,7 +857,7 @@ Each phase ships something testable. No phase starts before the one below it is 
 | **6. Scoring** ✅ | `scoring.py` — 16 metrics across four pillars, percentile-ranked within the pool, segment ranks, dated scoreboards | **Done.** Direction asserted per metric and tested in both polarities; missing pillars renormalise; cycle position reported beside the score, never folded in |
 | **7. Smart money** ✅ | `holdings_13f.py`, `smart_money.py` — EDGAR 13F ingestion, CIK and CUSIP resolution, quarter diffs, conviction-weighted clusters | **Done.** Reproduces Coatue's Q2 2026 book ($50.9bn) from live filings; conviction weighting cut spurious clusters from 5 to 1 |
 | **8. Events** ✅ | `events.py` — daily-index discovery, Form 4 with joint-filing and split-lot handling, 8-K item rating, insider clusters, quality-ranked feed | **Done.** All free from EDGAR. Surfaced Intel's CEO buying $10.0M of his own stock. News feed deliberately skipped — see below |
-| **9. Signals** | `signals.py` — four gates, decision matrix, full evidence payload | Every signal carries its reasoning and falsification condition |
+| **9. Signals** ✅ | `signals.py` — four gates, decision matrix, evidence and falsification per call | **Done.** Current output: no buys, 23 HOLD, 14 AVOID, 3 EXIT. The no-action policy fires as configured |
 | **10. Portfolio** | `portfolio.py` — ledger, quarter-Kelly sizing, rebalancing, thesis tracking | Simulates a $1,000 account end-to-end; limits provably enforced |
 | **11. Backtest** | `backtest.py` — PIT-correct, survivorship-free, walk-forward, full metrics | **Stage 1 gate cleared or strategy revised** |
 | **12. Dashboard** | Local web interface | Every number on screen traceable to its source |

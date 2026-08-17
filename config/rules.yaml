@@ -120,6 +120,11 @@ quality:
   roic_wacc_spread:
     basis: published
     meaningful_spread_bps: 300
+    # A hard gate on ROIC below WACC is too sharp for an ESTIMATED cost of
+    # capital: beta comes from a regression and the equity risk premium is an
+    # assumption, so a small shortfall sits inside the error of the estimate.
+    # Only a shortfall wider than this disqualifies a company outright.
+    gate_tolerance_bps: 300
   fcf_conversion:
     basis: convention
     good_min: 0.80
@@ -254,6 +259,10 @@ scoring:
     growth: 0.20
   # Percentile ranks within the sector universe, not absolute grades.
   method: percentile_within_universe
+  # Above this quality percentile, softening ratios are read as mean reversion
+  # from a peak rather than deterioration. Without it, NVIDIA's fall from a 75%
+  # to a 71% gross margin produced an EXIT on the best-ranked name in the pool.
+  high_quality_percentile: 60
   # A missing pillar is renormalised away, never scored zero — a company must not
   # be punished twice for a disclosure gap.
   missing_pillar: renormalise
