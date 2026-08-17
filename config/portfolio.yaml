@@ -11,15 +11,21 @@ wallet:
   size: 1000.0
 
 # Core-satellite construction. Core is diversified market beta; the satellite is
-# the thesis sleeve. See README §9 for why a 35% single-theme satellite is above
-# conventional advisory guidance and is a deliberate, informed choice.
+# the thesis sleeve.
+#
+# Sized for a STANDALONE account (confirmed 2026-08-17): this money does not sit
+# beside other holdings, so one sector must not be able to sink it. The satellite
+# is therefore 20% — the top of the conventional 10-20% single-theme band, which
+# respects a stated sector conviction without pretending the concentration is
+# diluted somewhere else. An earlier draft used 35%, defensible only if this were
+# part of a larger portfolio.
 sleeves:
   core_market:
-    target_pct: 0.45
+    target_pct: 0.55
     instruments: [VTI, VOO]
     rationale: "Cheap market beta. The part of the portfolio that is not a bet."
   satellite_ai_infra:
-    target_pct: 0.35
+    target_pct: 0.20
     rationale: "The thesis sleeve."
     # At small account sizes a $20-65 single-name position carries full
     # idiosyncratic risk without enough size to justify the research. The ETF
@@ -28,11 +34,13 @@ sleeves:
     etf_instruments: [SOXX, SMH]
     max_individual_names: 6
   gold:
-    target_pct: 0.10
+    target_pct: 0.15
     instruments: [GLD, IAU]
     rationale: >
       World Gold Council research puts the risk-adjusted optimum at 5-8%, with
-      4-15% improving Sharpe across portfolio types. A diversifier, not a bet.
+      4-15% improving Sharpe across portfolio types. Set toward the upper half
+      because this is a standalone account carrying a concentrated sector sleeve.
+      A diversifier, not a bet.
   cash:
     target_pct: 0.10
     rationale: "Dry powder for margin-of-safety opportunities, and a drawdown buffer."
@@ -65,6 +73,15 @@ rebalancing:
   # Direct new contributions to the most underweight sleeve before proposing
   # any sale.
   prefer_contributions_over_sales: true
+
+# When nothing clears the margin of safety, the system says so (confirmed
+# 2026-08-17). It does not fall back to ranking the least-stretched names as if a
+# relative ordering were an absolute green light, and it does not quietly relax
+# the margin to manufacture something actionable. Long stretches with no
+# individual-stock buys are an expected output, not a malfunction.
+no_qualifying_buy:
+  action: report_no_action
+  direct_contributions_to: core_market
 
 execution:
   # The system proposes; the human approves. It never places an order.

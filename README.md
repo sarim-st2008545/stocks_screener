@@ -855,7 +855,7 @@ Each phase ships something testable. No phase starts before the one below it is 
 | **4. Valuation** ✅ | `valuation.py` — WACC from CAPM, DCF with sensitivity grid, **reverse DCF**, own-history multiples, margin of safety | **Done.** Never a single fair value; the reverse DCF is primary because a conservative forward DCF sits below price for nearly the whole sector and so cannot rank it |
 | **5. Cycle** ✅ | `cycle.py` — margin-vs-own-range positioning, inventory and capex corroboration, repeatability verdict | **Done.** All three memory names read PEAK; stable businesses correctly have no cycle to place; Apple's margin high is identified as secular, not cyclical |
 | **6. Scoring** ✅ | `scoring.py` — 16 metrics across four pillars, percentile-ranked within the pool, segment ranks, dated scoreboards | **Done.** Direction asserted per metric and tested in both polarities; missing pillars renormalise; cycle position reported beside the score, never folded in |
-| **7. Smart money** | `holdings_13f.py` — DERA ingestion, per-filer history, cluster detection | Reproduces a known filer's holdings for a past quarter; cluster logic tested |
+| **7. Smart money** ✅ | `holdings_13f.py`, `smart_money.py` — EDGAR 13F ingestion, CIK and CUSIP resolution, quarter diffs, conviction-weighted clusters | **Done.** Reproduces Coatue's Q2 2026 book ($50.9bn) from live filings; conviction weighting cut spurious clusters from 5 to 1 |
 | **8. Events & news** | `events.py`, `news.py` — 8-K, Form 4, earnings calendar, summaries | Events attach to names; numbers never sourced from an LLM |
 | **9. Signals** | `signals.py` — four gates, decision matrix, full evidence payload | Every signal carries its reasoning and falsification condition |
 | **10. Portfolio** | `portfolio.py` — ledger, quarter-Kelly sizing, rebalancing, thesis tracking | Simulates a $1,000 account end-to-end; limits provably enforced |
@@ -882,21 +882,29 @@ Flagged rather than assumed.
    (c) pay for a data feed. **Recommendation: (a) initially, (b) later, clearly labelled.**
 2. **News source.** Free RSS covers headlines but not depth; paid APIs cost money. Needs a
    decision before Phase 8, not before Phase 0.
-3. **Satellite sizing.** The proposed 35% single-theme allocation is above conventional
-   advisory guidance. Confirm whether the configured wallet is a standalone experiment or
-   part of a larger portfolio — the answer changes the right number. *(Wallet size itself
-   is settled: a config value, $1,000 default, adjustable at any time.)*
-4. **Broker.** Fractional-share availability differs: Fidelity and Schwab restrict
-   fractional stock purchases to S&P 500 names, which would exclude some names in this
-   universe; Robinhood's universe is broader. Affects what the portfolio module can
-   actually propose. Needed by Phase 10.
-5. **Paper-trading duration.** One month proves the plumbing; roughly six months proves the
+3. **Paper-trading duration.** One month proves the plumbing; roughly six months proves the
    strategy. See [§10](#10-validation-backtest--paper--live) for why the distinction
    matters at this rebalance frequency.
+4. **News source.** Free RSS covers headlines but not depth; paid APIs cost money. Needed
+   before Phase 8.
 
-**Settled since first draft:** retail commentary excluded entirely
-([§6](#6-smart-money-layer)); wallet size is configurable rather than fixed; legacy code
-archived to `legacy/` rather than deleted; repository under local version control.
+**Settled:**
+
+- Retail commentary excluded entirely ([§6](#6-smart-money-layer)).
+- Wallet size is a config value, $1,000 default, adjustable at any time.
+- **The wallet is a standalone account**, so the AI-infrastructure satellite is sized at
+  **20%** — the top of the conventional 10–20% single-theme band — with a 55% broad-market
+  core, 15% gold and 10% cash. An earlier 35% satellite would only have been defensible if
+  this money sat beside other holdings.
+- **When nothing clears the margin of safety, the system says so.** It does not fall back to
+  ranking the least-stretched names as though a relative ordering were an absolute green
+  light, and it does not relax the 25% margin to manufacture something actionable. Long
+  stretches with no individual-stock buys are an expected output. Contributions go to the
+  core sleeve instead.
+- **Broker undecided**, so the portfolio module is built broker-agnostic, assuming
+  fractional shares and flagging any name whose price makes it impractical at this account
+  size.
+- Legacy code archived to `legacy/` rather than deleted; repository under version control.
 
 ---
 
