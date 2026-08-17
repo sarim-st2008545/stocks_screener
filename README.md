@@ -157,7 +157,7 @@ assumption-driven one.
 
 | Layer | Source | Access | What it cannot do |
 |---|---|---|---|
-| Fundamentals | **SEC EDGAR XBRL** (`companyfacts`, bulk archive) | Free, no key. Fair-access limit ~10 req/s | Only US filers. Concept coverage is uneven — companies abandon tags, multi-class filers strip share counts |
+| Fundamentals | **SEC EDGAR XBRL** (`companyfacts`, bulk archive) | Free, no key. Fair-access limit ~10 req/s | Concept coverage is uneven — companies abandon tags, multi-class filers strip share counts. Foreign private issuers are a real gap, see below |
 | Filing dates | **SEC EDGAR submissions** | Free | — |
 | Prices | **yfinance** (daily OHLCV, batched) | Free, unofficial | Unofficial API, can break. Splits/dividends need care |
 | Institutional holdings | **SEC Form 13F-HR** + SEC DERA quarterly bulk datasets | Free | See [§6](#6-smart-money-layer) — no shorts, 45-day lag, quarterly snapshot only |
@@ -190,6 +190,31 @@ The fix is what professional shops call a point-in-time database. Two mechanical
    | Annual (10-K) | **105 days** |
 
    Never faster than the statutory deadline. Configurable, logged in every backtest run.
+
+### Foreign private issuers — measured, not assumed
+
+Verified against live EDGAR during Phase 0, across all 41 universe names:
+
+- **Reporting currency varies.** TSMC files IFRS in **TWD**; ASML files US-GAAP in
+  **EUR**. Assuming USD returned an *empty fact set* for both — data that was present
+  read as absent, the exact failure this project cannot tolerate. The fact engine now
+  detects each filer's reporting currency and records it.
+- **Ratios are currency-neutral, valuation is not.** Piotroski, Altman, ROIC, margins,
+  leverage, and growth all divide like-for-like and work natively in any currency.
+  Anything mixing filings with market prices — P/E, EV/EBITDA, FCF yield, market cap —
+  needs FX conversion, and **point-in-time historical FX rates become a Phase 4
+  dependency** for non-USD filers.
+- **TSMC cannot currently be analysed from SEC data at all.** Its FY2025 20-F was filed
+  2026-04-16, but the only fact reaching SEC's XBRL API is a cover-page share count —
+  the IFRS financial statements are not tagged there. Its newest usable financial data
+  is FY2024. Names in this state are flagged `INSUFFICIENT_DATA` and held through the
+  sector ETF rather than scored on absent data.
+
+Current measured coverage: **32 of 41 names** resolve a full core statement set. Most of
+the remainder are concept-naming variation (`Liabilities` untagged where it is derivable
+from assets minus equity; `StockholdersEquity` tagged with the noncontrolling-interest
+variant), which Phase 2 resolves with alternative-concept lists. TSMC is the one genuine
+data gap.
 
 ### Survivorship discipline
 
@@ -417,34 +442,30 @@ creates one.** Concretely:
   13F can move a `HOLD` toward an `ADD` at the margin; it can never manufacture a `BUY` on
   a business the numbers reject.
 
-### On retail commentators and finfluencers
+### Retail commentators — excluded, and why
 
-You asked specifically about **Kenan Grace**. Research identified a real finance content
-creator by that name — YouTube channel around 500–650K subscribers, `@KenanGrace` on X,
-branded "The Chart King" teaching fractal trading and technical analysis, with a linked
-public brokerage portfolio in roughly the **$30–50K** range.
+**Decided: out of scope entirely.** The system tracks SEC filings and 13F institutional
+positioning. It does not ingest retail commentary, finfluencer picks, or social sentiment
+from any source.
 
-Three problems for a data-driven system:
+The question arose over **Kenan Grace**, a finance content creator (YouTube channel around
+500–650K subscribers, `@KenanGrace` on X, branded "The Chart King" teaching fractal trading
+and technical analysis, with a linked public brokerage portfolio around **$30–50K**).
+Research found three disqualifying problems, and they generalise to the whole category:
 
 1. **Nowhere near the 13F threshold.** At $30–50K versus a $100M filing requirement, there
-   is no SEC record and never will be. Holdings would have to come from scraping his own
-   social posts — self-reported, unaudited, unverifiable, with no record of what he sold or
-   when.
-2. **Methodologically opposite to this project.** His published approach is chart-based
-   technical trading. This system is explicitly long-horizon fundamentals. Importing his
-   calls would import a method the rest of the design rejects.
-3. **A name collision worth knowing.** A similarly spelled but entirely unrelated person,
+   is no SEC record and never will be. Holdings would have to come from scraping social
+   posts — self-reported, unaudited, unverifiable, with no record of what was sold or when.
+   A system built on filed data cannot absorb that without lowering its own evidentiary bar.
+2. **Methodologically opposite to this project.** Chart-based technical trading against a
+   long-horizon fundamentals mandate. Importing the calls imports a method the rest of the
+   design rejects.
+3. **A name collision worth recording.** A similarly spelled but entirely unrelated person,
    *Keenan Gracey*, was convicted in a fake-billionaire stock-promotion fraud (2018–19).
-   Different individual — noted only so the two are never conflated in a data pipeline.
+   Noted only so the two are never conflated by a future data pipeline.
 
-**Design decision.** Retail commentary is out of scope for signal generation. If you want
-it, the honest form is a clearly-labelled **Tier 3 "public commentary" panel** — visible,
-attributed, timestamped, and structurally incapable of moving a signal — sitting beneath
-Tier 1 (SEC filings and financials) and Tier 2 (13F institutional positioning).
-
-If you meant a different person, or a fund manager whose name resolved wrongly, tell me and
-I will re-run this. If you specifically want this creator's picks visible, the Tier 3 panel
-is how it happens without corrupting the signal path.
+The evidence hierarchy is therefore two tiers, not three: **Tier 1** — SEC filings and
+audited financials; **Tier 2** — 13F institutional positioning, as corroboration only.
 
 ---
 
@@ -836,20 +857,21 @@ Flagged rather than assumed.
    (c) pay for a data feed. **Recommendation: (a) initially, (b) later, clearly labelled.**
 2. **News source.** Free RSS covers headlines but not depth; paid APIs cost money. Needs a
    decision before Phase 8, not before Phase 0.
-3. **"Kenan Grace" and retail commentary.** Research identified a technical-analysis
-   YouTube creator, far below the 13F threshold, whose method is opposite to this project's.
-   Confirm whether that is who you meant, and whether the Tier 3 commentary panel is worth
-   building at all. See [§6](#6-smart-money-layer).
-4. **Satellite sizing.** The proposed 35% single-theme allocation is above conventional
-   advisory guidance. Confirm whether this $1,000 is a standalone experiment or part of a
-   larger portfolio — the answer changes the right number.
-5. **Broker.** Fractional-share availability differs: Fidelity and Schwab restrict
+3. **Satellite sizing.** The proposed 35% single-theme allocation is above conventional
+   advisory guidance. Confirm whether the configured wallet is a standalone experiment or
+   part of a larger portfolio — the answer changes the right number. *(Wallet size itself
+   is settled: a config value, $1,000 default, adjustable at any time.)*
+4. **Broker.** Fractional-share availability differs: Fidelity and Schwab restrict
    fractional stock purchases to S&P 500 names, which would exclude some names in this
    universe; Robinhood's universe is broader. Affects what the portfolio module can
-   actually propose.
-6. **Paper-trading duration.** One month proves the plumbing; roughly six months proves the
+   actually propose. Needed by Phase 10.
+5. **Paper-trading duration.** One month proves the plumbing; roughly six months proves the
    strategy. See [§10](#10-validation-backtest--paper--live) for why the distinction
    matters at this rebalance frequency.
+
+**Settled since first draft:** retail commentary excluded entirely
+([§6](#6-smart-money-layer)); wallet size is configurable rather than fixed; legacy code
+archived to `legacy/` rather than deleted; repository under local version control.
 
 ---
 
@@ -882,6 +904,14 @@ beyond them.
 - **Coverage gaps are reported, never filled.** When a figure is not tagged, the system says
   so. It does not substitute an estimate and present it as a fact. Missing data must never
   read as good data.
+- **Some names in the universe cannot be analysed from SEC data.** TSMC is the current
+  example — its IFRS statements never reach SEC's XBRL API. The system flags these rather
+  than scoring them, which means the sector's single most important foundry is held only
+  through the ETF sleeve, not analysed directly. That is a real limitation of the free-data
+  mandate, not an oversight.
+- **Non-USD filers need FX conversion for valuation.** Ratio-based quality scoring works in
+  any currency, but every price-to-fundamentals multiple requires a point-in-time exchange
+  rate, adding a data dependency that does not exist for US filers.
 
 ---
 

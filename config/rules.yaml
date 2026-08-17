@@ -1,0 +1,220 @@
+# Analysis rulebook — every threshold the system applies, in one place.
+#
+# Each entry cites the framework it comes from. Where a number is a practitioner
+# convention rather than a published constant, `basis: convention` says so —
+# those are calibration bands to revisit, not laws.
+#
+# See README.md §5 for the reasoning behind each block.
+
+# ---------------------------------------------------------------------------
+# Point-in-time data discipline (README §4)
+# ---------------------------------------------------------------------------
+# The single most important block in this file. Getting it wrong invalidates
+# every backtest number the system will ever produce.
+point_in_time:
+  # Primary gate: a fact is usable at date T only if the filing that carried it
+  # was submitted to EDGAR on or before T. SEC XBRL supplies a real `filed`
+  # date per observation, so this is exact rather than approximated.
+  enforce_filing_date: true
+
+  # Margin after the filing date before a fact is treated as known, covering
+  # propagation delay between EDGAR acceptance and the fact appearing in the
+  # companyfacts API / bulk archive.
+  settle_days: 2
+
+  # Fallback only — used when an observation carries no usable `filed` date.
+  # Derived from statutory SEC deadlines (10-K 60/75/90 days by filer status,
+  # 10-Q 40/45 days) plus measured filing gaps averaging ~43 days and reaching
+  # ~61. Deliberately conservative; never faster than the statutory deadline.
+  fallback_lag_days:
+    quarterly: 90
+    annual: 105
+
+  # Reject any fact whose filing date precedes its own period end. Such records
+  # are malformed and would silently leak future information.
+  reject_filed_before_period_end: true
+
+# ---------------------------------------------------------------------------
+# Fact resolution windows (inherited from the prior codebase, hard-won)
+# ---------------------------------------------------------------------------
+facts:
+  # Companies abandon tags without deleting history. Mastercard's LongTermDebt
+  # stops in 2011 while it carried billions under other tags. Facts older than
+  # this are treated as absent so resolution falls through to a live tag.
+  max_instant_age_days: 550
+
+  # Income-statement facts get a longer horizon: a TTM figure stitched from four
+  # quarters has its oldest link already a year behind the window end.
+  max_duration_age_days: 900
+
+  # A duration fact counts as annual/quarterly if its length falls in range.
+  annual_days: [330, 400]
+  quarter_days: [80, 100]
+
+  # Two TTM windows may be paired in a ratio only if their end dates fall within
+  # this many days. Without it, annual interest income gets divided into a single
+  # quarter of revenue.
+  period_alignment_tolerance_days: 45
+
+  # Balance-sheet components are summed only when from the same filing date,
+  # within this tolerance.
+  balance_sheet_alignment_days: 10
+
+# ---------------------------------------------------------------------------
+# Piotroski F-Score — Piotroski (2000), Journal of Accounting Research
+# ---------------------------------------------------------------------------
+piotroski:
+  basis: published
+  source: "Piotroski (2000), Journal of Accounting Research 38 (Supplement)"
+  high_quality_min: 8
+  good_min: 7
+  avoid_max: 2
+  # Validated on high book-to-market value stocks. Growth tech issues equity and
+  # invests heavily, so it scores moderately even when excellent. Quality input,
+  # never a pass/fail gate.
+  use_as_gate: false
+
+# ---------------------------------------------------------------------------
+# Altman Z-Score — Altman (1968); 1995 non-manufacturer revision
+# ---------------------------------------------------------------------------
+altman:
+  basis: published
+  source: "Altman (1968), Journal of Finance 23(4); Z'' revision (1995)"
+  # Z'' drops the sales/assets term that unfairly penalises asset-light firms.
+  # Default for fabless designers and software.
+  z_double_prime:
+    coefficients:
+      working_capital_to_assets: 6.56
+      retained_earnings_to_assets: 3.26
+      ebit_to_assets: 6.72
+      equity_to_total_liabilities: 1.05
+    safe_above: 2.6
+    distress_below: 1.1
+  # Original Z, for companies with genuine manufacturing asset bases (IDMs,
+  # foundries). Variant selection is recorded per company.
+  z_original:
+    coefficients:
+      working_capital_to_assets: 1.2
+      retained_earnings_to_assets: 1.4
+      ebit_to_assets: 3.3
+      market_equity_to_total_liabilities: 0.6
+      sales_to_assets: 0.999
+    safe_above: 2.99
+    distress_below: 1.81
+
+# ---------------------------------------------------------------------------
+# Quality and moat (README §5.3)
+# ---------------------------------------------------------------------------
+quality:
+  # Koller/Goedhart/Wessels, Valuation (McKinsey). The core value-creation test.
+  roic_wacc_spread:
+    basis: published
+    meaningful_spread_bps: 300
+  fcf_conversion:
+    basis: convention
+    good_min: 0.80
+    red_flag_below: 0.60
+  rd_intensity:
+    basis: convention
+    semis_normal_range: [0.10, 0.25]
+    harvesting_below: 0.12
+
+# ---------------------------------------------------------------------------
+# Balance sheet health — Moody's / S&P rating methodologies
+# ---------------------------------------------------------------------------
+balance_sheet:
+  basis: convention
+  source: "Moody's Global Technology Hardware & Semiconductor; S&P Corporate Methodology"
+  net_debt_to_ebitda:
+    safe_below: 2.0
+    moderate_below: 3.0
+    risky_above: 3.5
+  interest_coverage:
+    safe_above: 4.0
+    adequate_above: 3.0
+    warning_below: 1.5
+  current_ratio:
+    healthy_range: [1.5, 3.0]
+    risk_below: 1.0
+  quick_ratio:
+    preferred_min: 1.0
+
+# ---------------------------------------------------------------------------
+# Valuation (README §5.5)
+# ---------------------------------------------------------------------------
+valuation:
+  dcf:
+    basis: published
+    source: "CFA Institute curriculum; Damodaran, Investment Valuation; Koller et al."
+    equity_risk_premium_range: [0.04, 0.06]
+    # Bloomberg convention: 0.67 * raw beta + 0.33 * 1.0
+    beta_adjustment:
+      raw_weight: 0.67
+      market_weight: 0.33
+    # Gordon Growth terminal value. Capped at long-run nominal GDP growth, and
+    # always strictly below WACC.
+    terminal_growth_range: [0.02, 0.04]
+    terminal_growth_default: 0.025
+    # A DCF reported as one number is a false-precision machine. Output is always
+    # a band produced by this sensitivity grid.
+    sensitivity:
+      wacc_delta_bps: [-200, -100, 0, 100, 200]
+      terminal_growth_delta_bps: [-100, -50, 0, 50, 100]
+
+  # Graham's margin of safety. Buy-side action requires price below the base-case
+  # fair value by this fraction.
+  margin_of_safety: 0.25
+
+  # Sell-side calibration bands, distorted upward by the AI cycle since 2023.
+  # Compared against a company's own 5-year history and sub-segment peers, never
+  # as absolute cross-sector cutoffs. Revisit periodically.
+  multiples:
+    basis: convention
+    forward_pe:
+      normal_cycle_range: [20, 30]
+      priced_for_perfection_above: 40
+    peg:
+      source: "Lynch, One Up on Wall Street (1989)"
+      fair: 1.0
+      cheap_below: 1.0
+      expensive_above: 2.0
+    ev_ebitda:
+      through_cycle_range: [10, 15]
+    fcf_yield:
+      expensive_below: 0.02
+      fair_range: [0.04, 0.06]
+      cheap_above: 0.07
+
+# ---------------------------------------------------------------------------
+# Cycle awareness (README §5.6)
+# ---------------------------------------------------------------------------
+cycle:
+  basis: convention
+  capex_to_revenue:
+    fabless_range: [0.03, 0.08]
+    idm_foundry_range: [0.25, 0.50]
+  inventory_days:
+    downcycle_risk_above: 120
+  # Margin position within a company's own 5-year range, used to flag earnings
+  # that may not repeat.
+  margin_percentile_peak_above: 0.80
+  margin_percentile_trough_below: 0.20
+
+# ---------------------------------------------------------------------------
+# Composite scoring (README §5.7)
+# ---------------------------------------------------------------------------
+# Every individual rule above is a published framework. These four weights are
+# NOT. They are a hypothesis under test, to be validated by walk-forward
+# backtest — not a dial to turn until the equity curve looks good.
+scoring:
+  basis: hypothesis
+  weights:
+    quality: 0.30
+    financial_strength: 0.25
+    valuation: 0.25
+    growth: 0.20
+  # Percentile ranks within the sector universe, not absolute grades.
+  method: percentile_within_universe
+  # A missing pillar is renormalised away, never scored zero — a company must not
+  # be punished twice for a disclosure gap.
+  missing_pillar: renormalise

@@ -1,0 +1,12 @@
+# Core
+requests>=2.31
+pyyaml>=6.0
+python-dotenv>=1.0
+
+# Market data
+yfinance>=0.2.40
+pandas>=2.0
+numpy>=1.26
+
+# Testing
+pytest>=8.0

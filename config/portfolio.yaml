@@ -1,0 +1,80 @@
+# Portfolio construction and fund management (README §9)
+#
+# Wallet size is a configuration value, not a design constraint — adjust it
+# freely. The sleeve percentages, not the dollar amounts, are what the system
+# reasons about.
+
+wallet:
+  currency: USD
+  # Starting figure. Adjust at any time; every rule below is expressed as a
+  # percentage so nothing breaks when this changes.
+  size: 1000.0
+
+# Core-satellite construction. Core is diversified market beta; the satellite is
+# the thesis sleeve. See README §9 for why a 35% single-theme satellite is above
+# conventional advisory guidance and is a deliberate, informed choice.
+sleeves:
+  core_market:
+    target_pct: 0.45
+    instruments: [VTI, VOO]
+    rationale: "Cheap market beta. The part of the portfolio that is not a bet."
+  satellite_ai_infra:
+    target_pct: 0.35
+    rationale: "The thesis sleeve."
+    # At small account sizes a $20-65 single-name position carries full
+    # idiosyncratic risk without enough size to justify the research. The ETF
+    # share therefore dominates until the account grows.
+    etf_share: 0.60
+    etf_instruments: [SOXX, SMH]
+    max_individual_names: 6
+  gold:
+    target_pct: 0.10
+    instruments: [GLD, IAU]
+    rationale: >
+      World Gold Council research puts the risk-adjusted optimum at 5-8%, with
+      4-15% improving Sharpe across portfolio types. A diversifier, not a bet.
+  cash:
+    target_pct: 0.10
+    rationale: "Dry powder for margin-of-safety opportunities, and a drawdown buffer."
+
+# Position limits (README §9).
+limits:
+  # The widely used wealth-management threshold at which a holding is formally
+  # "concentrated". Regulatory anchor: RIC 25/5/50 diversification test.
+  max_single_name_pct_of_portfolio: 0.10
+  # Because NVDA + AMD + TSM is one bet, not three.
+  max_segment_pct_of_portfolio: 0.20
+  min_position_usd: 25.0
+
+sizing:
+  method: fractional_kelly
+  # Full Kelly assumes edges are known exactly; estimation error makes the
+  # computed fraction too large. Half-Kelly (Thorp) retains ~75% of growth at
+  # much lower variance; quarter-Kelly ~50% of growth at ~25% of the volatility.
+  # Given how imprecisely a fundamental score maps to a probabilistic edge, the
+  # conservative fraction is the honest one.
+  kelly_fraction: 0.25
+  source: "Rotando & Thorp (1992); standard fractional-Kelly practice"
+
+rebalancing:
+  # Threshold bands with a calendar check. Vanguard-referenced research finds an
+  # annual review plus a +/-5-point band captures ~99% of the return of
+  # continuous rebalancing while cutting transactions ~95%.
+  band_pct: 0.05
+  review_frequency: quarterly
+  # Direct new contributions to the most underweight sleeve before proposing
+  # any sale.
+  prefer_contributions_over_sales: true
+
+execution:
+  # The system proposes; the human approves. It never places an order.
+  require_human_approval: true
+  # Fractional-share support differs by broker and affects what can be proposed:
+  # Fidelity and Schwab restrict fractional stock purchases to S&P 500 names,
+  # which would exclude some names in this universe. Robinhood's is broader.
+  # Set once the broker is chosen (README §13).
+  broker: null
+  fractional_shares: true
+  assumed_commission_usd: 0.0
+  # Modelled explicitly in backtests rather than assumed away.
+  assumed_slippage_bps: 10

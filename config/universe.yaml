@@ -1,0 +1,118 @@
+# AI infrastructure universe definition (README §3)
+#
+# Constituents are a research-derived candidate list. Everything measurable —
+# market cap, profitability, liquidity — is re-derived from filings at runtime
+# and never trusted from this file. The `stability_flag` entries record WHY a
+# name is treated cautiously, which is a judgement, not a measurement.
+
+benchmark:
+  primary: SOXX      # iShares Semiconductor ETF — broad value-chain coverage
+  secondary: SMH     # concentrated AI mega-cap comparison
+  market: SPY        # was the sector bet worth making at all?
+
+# Screens applied to every candidate before analysis (README §3).
+screens:
+  min_market_cap_usd: 2_000_000_000
+  min_avg_daily_dollar_volume: 10_000_000
+  require_us_listing: true
+  # Enforces the "established and cash-generative" mandate. Names failing this
+  # are routed to the SPECULATIVE bucket, not silently dropped.
+  require_positive_operating_cash_flow: true
+
+# Portfolio concentration is measured by segment as well as by ticker: NVDA,
+# AMD and TSM are one bet on AI silicon demand wearing three names.
+segments:
+
+  ai_accelerators:
+    label: AI accelerators
+    members:
+      - {ticker: NVDA, note: "Dominant data-center GPU share plus CUDA software moat"}
+      - {ticker: AMD,  note: "#2 merchant GPU (MI300/MI400); also a server CPU play"}
+
+  cpu_general_silicon:
+    label: CPU / general silicon
+    members:
+      - {ticker: ARM,  note: "Profitable IP-royalty model behind Grace, Graviton, custom hyperscaler CPUs"}
+      - {ticker: INTC, note: "x86 incumbent plus US-backed foundry bet (18A node)",
+         stability_flag: "Policy-backed turnaround; profitability not yet restored"}
+
+  networking:
+    label: Networking silicon
+    members:
+      - {ticker: AVGO, note: "~70% share of custom AI ASIC co-design (Google TPU, Meta MTIA)"}
+      - {ticker: MRVL, note: "#2 custom ASIC partner (AWS Trainium, Microsoft Maia)"}
+      - {ticker: ANET, note: "#1 AI data-center Ethernet switching"}
+      - {ticker: CSCO, note: "Legacy scale and diversification; slower AI networking growth"}
+      - {ticker: ALAB, note: "PCIe/connectivity retimers for AI racks",
+         stability_flag: "2024 IPO; thin public track record"}
+      - {ticker: CRDO, note: "Optical DSP / active electrical cable connectivity",
+         stability_flag: "2022 IPO; short history, high volatility"}
+
+  memory_storage:
+    label: Memory & storage
+    members:
+      - {ticker: MU,  note: "HBM sold out through 2027; exited consumer to focus on AI/enterprise"}
+      - {ticker: WDC, note: "NAND/HDD capacity for AI data storage tiers"}
+      - {ticker: STX, note: "Nearline HDD demand from hyperscaler storage buildout"}
+    # Genuinely cyclical despite the AI re-rating. The cycle module must treat
+    # peak-margin memory differently from trough-margin memory.
+    cyclical: true
+
+  foundry_equipment:
+    label: Foundry & fab equipment
+    members:
+      - {ticker: TSM,  note: "Sole advanced-node foundry for NVDA/AMD/AAPL/AVGO"}
+      - {ticker: ASML, note: "Sole EUV lithography supplier"}
+      - {ticker: AMAT, note: "Deposition/materials engineering; broad WFE exposure"}
+      - {ticker: LRCX, note: "Deposition and etch"}
+      - {ticker: KLAC, note: "Process control and inspection; best-in-class margins"}
+      - {ticker: ENTG, note: "Advanced materials and contamination control"}
+      - {ticker: TER,  note: "Automated test equipment"}
+      - {ticker: MKSI, note: "Process control subsystems"}
+    cyclical: true
+
+  servers_integrators:
+    label: Servers & system integrators
+    members:
+      - {ticker: DELL, note: "Large AI server backlog; thin AI-server margins"}
+      - {ticker: HPE,  note: "AI plus networking growth post-Juniper"}
+      - {ticker: CLS,  note: "Hyperscaler-direct rack/networking ODM manufacturing"}
+      - {ticker: SMCI, note: "Very large AI server backlog",
+         stability_flag: "2024 auditor resignation, SEC scrutiny, ongoing dilution — governance risk"}
+
+  hyperscalers:
+    label: Hyperscalers
+    members:
+      - {ticker: MSFT,  note: "Azure AI capex; the demand engine"}
+      - {ticker: GOOGL, note: "TPU custom silicon plus Google Cloud"}
+      - {ticker: AMZN,  note: "AWS Trainium/Inferentia custom silicon"}
+      - {ticker: META,  note: "MTIA custom silicon; largest non-cloud AI capex"}
+      - {ticker: ORCL,  note: "OCI AI capacity buildout"}
+      - {ticker: AAPL,  note: "Custom silicon plus Private Cloud Compute; capex-light"}
+
+  datacenter_power:
+    label: Data-center power & electrical
+    members:
+      - {ticker: VRT, note: "NVIDIA co-development partner on power/thermal architecture"}
+      - {ticker: ETN, note: "Electrical equipment; backlog driven by data-center demand"}
+      - {ticker: GEV, note: "Grid and turbine equipment", stability_flag: "2024 spin-off; short standalone history"}
+      - {ticker: CEG, note: "Largest US nuclear fleet; direct hyperscaler PPAs"}
+      - {ticker: VST, note: "Merchant nuclear and gas; data-center demand contracts"}
+      - {ticker: TLN, note: "Susquehanna nuclear co-located with Amazon data center"}
+      - {ticker: NEE, note: "Largest US utility; renewables plus nuclear. Lower-beta power exposure"}
+      - {ticker: PWR, note: "Grid-buildout contractor"}
+
+  ai_software:
+    label: AI software & analytics
+    members:
+      - {ticker: PLTR, note: "Government plus commercial AI platform; genuinely profitable",
+         stability_flag: "Valuation is the risk, not the business"}
+      - {ticker: ZETA, note: "AI marketing cloud",
+         stability_flag: "Only just GAAP-profitable; small-cap, thinnest track record"}
+
+# Explicitly out of scope for a stable, established mandate (README §3).
+excluded:
+  - {category: neoclouds, examples: [CRWV, NBIS],
+     reason: "Circular vendor-financing exposure; short history; capital-intensive with unproven returns"}
+  - {category: small_modular_reactors, examples: [OKLO, SMR],
+     reason: "Pre-revenue; no fundamentals to analyse"}
