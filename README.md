@@ -861,7 +861,7 @@ Each phase ships something testable. No phase starts before the one below it is 
 | **8. Events** ✅ | `events.py` — daily-index discovery, Form 4 with joint-filing and split-lot handling, 8-K item rating, insider clusters, quality-ranked feed | **Done.** All free from EDGAR. Surfaced Intel's CEO buying $10.0M of his own stock. News feed deliberately skipped — see below |
 | **9. Signals** ✅ | `signals.py` — four gates, decision matrix, evidence and falsification per call | **Done.** Current output: no buys, 23 HOLD, 14 AVOID, 3 EXIT. The no-action policy fires as configured |
 | **10. Portfolio** ✅ | `portfolio.py` — ledger with thesis and falsification per position, bounded score-tilt sizing, position and segment caps, rebalancing bands, breach detection | **Done.** Fresh $1,000 wallet plans to $550 VTI / $200 SOXX / $150 GLD / $100 cash. Literal Kelly rejected — see §9 |
-| **11. Backtest** | `backtest.py` — PIT-correct, survivorship-free, walk-forward, full metrics | **Stage 1 gate cleared or strategy revised** |
+| **11. Backtest** ✅ | `backtest.py` — point-in-time signals rebuilt at each rebalance, daily-marked equity curve, modelled costs, walk-forward windows, gates stated before the numbers | **Built and validated on a short window.** Full 11-year run in progress. Daily marking was essential: quarterly snapshots understated drawdown by 10x |
 | **12. Dashboard** | Local web interface | Every number on screen traceable to its source |
 | **13. Paper trading** | `paper.py` — forward-test runner and logging | **Stage 2 gate cleared** |
 | **14. Live, staged** | Fractional capital, live-versus-paper comparison | Live tracks paper within tolerance |
