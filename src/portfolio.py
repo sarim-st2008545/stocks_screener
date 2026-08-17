@@ -583,6 +583,19 @@ def main() -> None:
     parser.add_argument("--contribution", type=float, default=0.0)
     parser.add_argument("--tickers", nargs="*")
     parser.add_argument("--ledger", default=str(LEDGER_PATH))
+    parser.add_argument(
+        "--approve",
+        type=int,
+        metavar="N",
+        help="accept proposal N from the listing and record it in the ledger",
+    )
+    parser.add_argument(
+        "--reject",
+        type=int,
+        metavar="N",
+        help="reject proposal N, logging the override",
+    )
+    parser.add_argument("--reason", default="", help="why a proposal was rejected")
     args = parser.parse_args()
 
     as_of = date.fromisoformat(args.as_of) if args.as_of else date.today()
@@ -615,6 +628,39 @@ def main() -> None:
         as_of=as_of,
     )
     print(report(plan, ledger, prices_by_ticker))
+
+    # Approval and rejection both happen here rather than in a web form, so every
+    # decision leaves a logged record of who chose what.
+    index = args.approve or args.reject
+    if index is None:
+        return
+    if not 1 <= index <= len(plan.proposals):
+        print(f"\nno proposal {index}; there are {len(plan.proposals)}")
+        return
+    proposal = plan.proposals[index - 1]
+    if proposal.action == Act.NO_ACTION:
+        print("\nthat entry is a statement, not a trade - nothing to approve")
+        return
+
+    if args.reject:
+        ledger.record_rejection(proposal, args.reason or "no reason given", when=as_of)
+        ledger.save(Path(args.ledger))
+        print(f"\nrejected: {proposal.label()}")
+        print("  logged, so the record shows the override")
+        return
+
+    price = prices_by_ticker.get(proposal.ticker)
+    if price is None:
+        print(f"\ncannot price {proposal.ticker}; not recording a trade at an unknown price")
+        return
+    try:
+        ledger.apply(proposal, price=price, when=as_of)
+    except ValueError as exc:
+        print(f"\nrefused: {exc}")
+        return
+    ledger.save(Path(args.ledger))
+    print(f"\nrecorded: {proposal.label()}")
+    print(f"  cash now {ledger.cash:,.2f}")
 
 
 if __name__ == "__main__":
