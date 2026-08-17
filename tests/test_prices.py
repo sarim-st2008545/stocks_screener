@@ -71,6 +71,55 @@ class TestSplitAdjustment:
         assert h.adjusted_close(date(2024, 1, 2)) == pytest.approx(48.17)
 
 
+class TestCacheRoundTrip:
+    """Regression: normalisation must be idempotent.
+
+    yfinance names the column "Stock Splits"; the cache stores it as "split". A
+    lookup that only knew the yfinance spelling zeroed the cached column, so the
+    first run priced pre-split dates correctly and every cached run afterwards
+    understated them by the split ratio. Nothing errored.
+    """
+
+    def test_normalise_is_idempotent(self):
+        from src.prices import _normalise
+
+        once = history(NVDA_LIKE).frame
+        twice = _normalise(once)
+        assert list(twice.columns) == list(once.columns)
+        assert twice["split"].sum() == once["split"].sum() == 10.0
+
+    def test_splits_survive_a_csv_round_trip(self, tmp_path):
+        from src.prices import _normalise
+
+        original = history(NVDA_LIKE).frame
+        path = tmp_path / "TEST.csv"
+        original.to_csv(path)
+        reloaded = _normalise(pd.read_csv(path, index_col=0, parse_dates=True))
+        restored = PriceHistory("TEST", reloaded)
+        assert restored.split_factor_after(date(2024, 1, 2)) == 10.0
+        assert restored.raw_close(date(2024, 1, 2)) == pytest.approx(481.70, abs=0.05)
+
+    def test_yfinance_column_spelling_also_works(self):
+        from src.prices import _normalise
+
+        raw = pd.DataFrame(
+            {
+                "Open": [48.0],
+                "High": [48.5],
+                "Low": [47.5],
+                "Close": [48.17],
+                "Adj Close": [48.08],
+                "Volume": [4e8],
+                "Stock Splits": [0.0],
+                "Dividends": [0.0],
+            },
+            index=pd.DatetimeIndex(["2024-01-02"]),
+        )
+        out = _normalise(raw)
+        assert list(out.columns) == COLUMNS
+        assert out["close"].iloc[0] == pytest.approx(48.17)
+
+
 class TestPointInTime:
     def test_never_returns_a_future_price(self):
         h = history(NVDA_LIKE)

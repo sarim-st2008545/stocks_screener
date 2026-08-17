@@ -21,7 +21,7 @@ from datetime import date
 from typing import Any
 
 from src import fundamentals as fundamentals_mod
-from src import prices, quality, universe
+from src import prices, quality, universe, valuation as valuation_mod
 from src.facts import FactSet
 from src.sec_client import SECClient
 
@@ -38,6 +38,7 @@ class Note:
     assessment: quality.QualityAssessment | None
     market_cap: float | None
     price: float | None
+    valuation: "valuation_mod.Valuation | None" = None
     error: str | None = None
 
 
@@ -71,9 +72,13 @@ def build(ticker: str, as_of: date | None = None, wacc: float | None = None) -> 
         else None
     )
     price = history.raw_close(as_of) if history is not None else None
-    assessment = quality.assess(f, market_cap=market_cap, wacc=wacc)
+    valued = valuation_mod.value(f, market_cap=market_cap, price=price, as_of=as_of)
+    # The valuation layer now supplies the cost of capital the ROIC spread needs.
+    assessment = quality.assess(
+        f, market_cap=market_cap, wacc=wacc if wacc is not None else valued.cost_of_capital.wacc
+    )
 
-    return Note(ticker, as_of, constituent, f, assessment, market_cap, price)
+    return Note(ticker, as_of, constituent, f, assessment, market_cap, price, valued)
 
 
 def _money(value: float | None, currency: str = "USD") -> str:
@@ -215,10 +220,58 @@ def render(note: Note) -> str:
     for label, verdict in a.balance_sheet.items():
         out.append(f"      {label:24}{verdict}")
 
+    # -- valuation ----------------------------------------------------------
+    v = note.valuation
+    if v is not None:
+        out.append("")
+        out.append("5. VALUATION")
+        out.append(THIN)
+        coc = v.cost_of_capital
+        out.append(f"  {coc.label()}")
+        if coc.beta_adjusted is not None:
+            out.append(
+                f"      beta {coc.beta_raw:.2f} raw -> {coc.beta_adjusted:.2f} adjusted"
+                f"   risk-free {coc.risk_free_rate:.2%}   equity premium {coc.equity_risk_premium:.2%}"
+            )
+        out.append(f"  {v.dcf.label()}   [{v.dcf.reliability}]")
+        if v.dcf.spread is not None:
+            out.append(
+                f"      band is {v.dcf.spread:.0%} of the base case across"
+                f" {len(v.dcf.grid)} sensitivity points"
+            )
+        for caveat in v.dcf.caveats:
+            out.append(f"      caveat: {caveat}")
+        out.append(f"  {v.verdict}")
+        out.append("")
+        out.append(f"  reverse DCF: {v.expectations.verdict}")
+        out.append(
+            "      this is the more useful reading - a conservative forward DCF sits"
+        )
+        out.append(
+            "      below price for nearly every name in this sector, which cannot rank them"
+        )
+        out.append("")
+        out.append("  multiples against the company's own history")
+        for key, label in (
+            ("pe", "P/E"),
+            ("ev_ebitda", "EV/EBITDA"),
+            ("ev_sales", "EV/Sales"),
+            ("fcf_yield", "FCF yield"),
+            ("peg", "PEG"),
+        ):
+            value_ = getattr(v.multiples, key)
+            if value_ is None:
+                out.append(f"      {label:11} n/a")
+                continue
+            shown = f"{value_:.2%}" if key.endswith("yield") else f"{value_:,.1f}"
+            out.append(f"      {label:11} {shown:>8}   {v.multiples.versus_own_history(key)}")
+        for n in v.multiples.notes + v.dcf.notes + coc.notes:
+            out.append(f"      note: {n}")
+
     # -- data quality -------------------------------------------------------
     coverage = f.coverage()
     out.append("")
-    out.append("5. DATA QUALITY")
+    out.append("6. DATA QUALITY")
     out.append(THIN)
     out.append(
         f"  line items resolved   {coverage['line_items_present']}/{coverage['line_items_total']}"
@@ -240,10 +293,9 @@ def render(note: Note) -> str:
 
     # -- not yet built ------------------------------------------------------
     out.append("")
-    out.append("6. NOT YET BUILT  (named so this note is not mistaken for complete)")
+    out.append("7. NOT YET BUILT  (named so this note is not mistaken for complete)")
     out.append(THIN)
     for phase, item in (
-        ("Phase 4", "valuation - DCF fair-value range, peer multiples, margin of safety"),
         ("Phase 5", "cycle position - is this peak or trough margin for this company"),
         ("Phase 6", "composite score - percentile rank against the investable pool"),
         ("Phase 7", "smart money - 13F institutional positioning as corroboration"),
@@ -254,8 +306,9 @@ def render(note: Note) -> str:
     ):
         out.append(f"  {phase:9} {item}")
     out.append("")
-    out.append("  No buy or sell recommendation exists yet: it requires a fair-value")
-    out.append("  estimate (Phase 4) and a validated backtest (Phase 11).")
+    out.append("  No buy or sell recommendation exists yet: valuation alone cannot")
+    out.append("  produce one. It needs the quality gates combined through the decision")
+    out.append("  matrix (Phase 9) and a validated backtest (Phase 11).")
     out.append(RULE)
     return "\n".join(out)
 

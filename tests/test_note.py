@@ -100,7 +100,7 @@ class TestRendering:
             assert "different stories" in text
 
     def test_error_note_renders_cleanly(self):
-        n = Note("XXXX", AS_OF, None, None, None, None, None, "not an SEC filer")
+        n = Note("XXXX", AS_OF, None, None, None, None, None, error="not an SEC filer")
         assert render(n) == "XXXX: not an SEC filer"
 
     def test_empty_company_still_renders(self):

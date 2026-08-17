@@ -145,7 +145,15 @@ def _cache_fresh(path: Path, ttl_hours: float = CACHE_TTL_HOURS) -> bool:
 
 
 def _normalise(frame: pd.DataFrame) -> pd.DataFrame:
-    """Reduce a yfinance frame to COLUMNS with a tz-naive daily index."""
+    """Reduce a yfinance frame to COLUMNS with a tz-naive daily index.
+
+    Must be idempotent. Normalising an already-normalised frame happens on every
+    cache read, and getting that wrong is invisible: yfinance names the column
+    "Stock Splits" while the cache stores it as "split", so a lookup that only
+    knew the yfinance spelling silently filled the cached column with zeros. The
+    first run then computed market caps correctly and every subsequent run — the
+    ones reading cache — understated any pre-split date by the split ratio.
+    """
     if frame is None or frame.empty:
         return pd.DataFrame(columns=COLUMNS)
 
@@ -159,7 +167,8 @@ def _normalise(frame: pd.DataFrame) -> pd.DataFrame:
         "close": ["close"],
         "adj_close": ["adj_close", "close"],
         "volume": ["volume"],
-        "split": ["stock_splits", "splits"],
+        # "split" first: the cached spelling must win on a round trip.
+        "split": ["split", "stock_splits", "splits"],
     }.items():
         for name in sources:
             if name in lookup:

@@ -171,6 +171,28 @@ valuation:
       wacc_delta_bps: [-200, -100, 0, 100, 200]
       terminal_growth_delta_bps: [-100, -50, 0, 50, 100]
 
+    # Projection. Growth is derived from the company's own history and faded
+    # linearly to the terminal rate, because no business compounds at its
+    # trailing rate forever. These are the system's OWN projections, not analyst
+    # consensus, and are labelled as such wherever they are reported.
+    projection_years: 10
+    # Hard cap on the year-one growth rate however strong recent history was.
+    # Semiconductor revenue can triple in a cycle year; extrapolating that is
+    # how a DCF manufactures a fair value several times the market's.
+    max_initial_growth: 0.25
+    # Floor, so a trough-year contraction is not projected forward for a decade.
+    min_initial_growth: -0.05
+    # History used to estimate the starting growth rate.
+    growth_lookback_years: 5
+
+    # Cost of debt floor, for filers whose interest expense implies an
+    # implausibly cheap rate (or none at all).
+    min_cost_of_debt: 0.03
+    # Bloomberg-convention beta adjustment is applied to a raw regression beta
+    # measured over this window against the market benchmark.
+    beta_window_years: 5
+    beta_min_observations: 100
+
   # Graham's margin of safety. Buy-side action requires price below the base-case
   # fair value by this fraction.
   margin_of_safety: 0.25
