@@ -850,7 +850,7 @@ Each phase ships something testable. No phase starts before the one below it is 
 |---|---|---|
 | **0. Foundation** ✅ | `sec_client.py`, `facts.py` — point-in-time fact resolution, currency detection, cache TTLs; config scaffolding | **Done.** PIT gate proven by test; NVIDIA's revenue matches its reported fiscal years at every as-of date |
 | **1. Universe** ✅ | `universe.py`, `prices.py` — split-aware prices, market-cap/liquidity/cash screens, dated snapshots and diffs | **Done.** 40/41 names screen through, TSMC flagged `INSUFFICIENT_DATA`, unevaluated screens recorded rather than passed |
-| **2. Fundamentals** | `fundamentals.py` — statements, TTM chaining, derived ratios, coverage report | Every ratio traces to filed facts; coverage gaps reported, never guessed |
+| **2. Fundamentals** ✅ | `fundamentals.py` — statements, TTM chaining, 17 derived ratios, provenance on every figure, coverage report | **Done.** 26/41 names resolve all 16 line items, most others 14–15. Micron's FY2023 memory crash reproduces exactly from point-in-time data (−9.1% gross margin, −$6.1bn FCF, 183 inventory days) |
 | **3. Quality** | `quality.py` — Piotroski, Altman Z''/Z variant selection, ROIC−WACC, FCF conversion | Hand-verified against filings for 3–5 names across segments |
 | **4. Valuation** | `valuation.py` — DCF with mandatory sensitivity grid, relative multiples, margin of safety | Outputs a bear/base/bull range; sanity-checked against published analyst fair values |
 | **5. Cycle** | `cycle.py` — capex intensity, inventory days, margin-vs-range | Correctly identifies the 2022 memory downcycle from historical data |
