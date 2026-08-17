@@ -78,7 +78,7 @@ segments:
       - {ticker: HPE,  note: "AI plus networking growth post-Juniper"}
       - {ticker: CLS,  note: "Hyperscaler-direct rack/networking ODM manufacturing"}
       - {ticker: SMCI, note: "Very large AI server backlog",
-         stability_flag: "2024 auditor resignation, SEC scrutiny, ongoing dilution — governance risk"}
+         stability_flag: "2024 auditor resignation, SEC scrutiny, ongoing dilution - governance risk"}
 
   hyperscalers:
     label: Hyperscalers

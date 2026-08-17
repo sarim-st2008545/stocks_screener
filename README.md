@@ -216,17 +216,38 @@ from assets minus equity; `StockholdersEquity` tagged with the noncontrolling-in
 variant), which Phase 2 resolves with alternative-concept lists. TSMC is the one genuine
 data gap.
 
-### Survivorship discipline
+### Survivorship discipline — and what it cannot fix here
 
 Testing today's constituent list against history silently deletes every company that went
-bankrupt, was acquired, or was delisted — inflating results. The system maintains a
-**point-in-time universe membership file** recording which names were in the sector on each
-historical date, including names later removed.
+bankrupt, was acquired, or was delisted — inflating results. Two mitigations apply, and one
+limitation is structural.
 
-For performance-related delistings without an explicit delisting return, the loss is
-modelled at **−30%**, not 0% and not dropped from the sample. (Shumway, *The Delisting Bias
-in CRSP Data*, Journal of Finance 1997, shows the naive treatment materially understates
-losses.)
+**Dated snapshots, going forward.** Every universe build writes a dated snapshot to
+`data/pit/universe/`. From now on, what was in the set on each date is *recorded* rather
+than reconstructed from hindsight, and status changes are diffed between runs.
+
+**Delisting returns.** For performance-related delistings without an explicit return, the
+loss is modelled at **−30%**, not 0% and not dropped from the sample. (Shumway, *The
+Delisting Bias in CRSP Data*, Journal of Finance 1997, shows the naive treatment materially
+understates losses.)
+
+**The structural limitation, stated plainly.** The candidate list was written in 2026, so it
+contains companies that survived to 2026. Measured against live EDGAR, SIC codes cannot fix
+this by defining membership rule-based: Amazon files as *Retail-Catalog & Mail-Order
+Houses*, Entegris as *Plastics Products*, and KLA as *Optical Instruments & Lenses*. A
+classification screen would admit irrelevant names and miss real ones.
+
+So the honest split is:
+
+| Segment group | Reconstructable backwards? | Why |
+|---|---|---|
+| Semiconductors, memory, equipment | **Yes** — SIC 3674 and neighbours plus market-cap and liquidity screens over all SEC filers | Classification codes genuinely identify these businesses |
+| Hyperscalers, data-center power, AI software | **No** — curated by thesis | "Is this an AI-infrastructure play?" is a judgement no SIC code encodes |
+
+A backtest over the semiconductor core can therefore claim to be survivorship-bias-free; one
+including the adjacent segments cannot, and must report that it is biased rather than imply
+otherwise. `universe.sic_peers()` is the entry point for the rule-based reconstruction, and
+building it out is part of Phase 11, not an afterthought.
 
 ---
 
@@ -654,9 +675,13 @@ stage sends the strategy back for revision, not forward with a caveat.
 
 Requirements, all non-negotiable:
 
-- **Point-in-time fundamentals** with the reporting-lag buffers from
+- **Point-in-time fundamentals** with the filing-date gate from
   [§4](#4-data-sources-and-their-limits). Any look-ahead invalidates the run
-- **Survivorship-bias-free universe** with −30% modelled for performance delistings
+- **Split-aware prices.** As-traded prices for market cap and multiples, adjusted prices for
+  returns. Conflating them understates historical market caps by the split ratio
+- **Survivorship handling per [§4](#4-data-sources-and-their-limits)** — genuinely
+  bias-free for the semiconductor core, explicitly biased for the curated adjacent segments,
+  with −30% modelled for performance delistings. Results must state which universe they used
 - **Transaction costs and slippage** modelled explicitly, not assumed to be zero
 - **Minimum 10 years** of history, to span at least one full business cycle and multiple
   regimes — critically including the 2022 semiconductor downcycle and the 2018–19 memory
@@ -823,8 +848,8 @@ Each phase ships something testable. No phase starts before the one below it is 
 
 | Phase | Deliverable | Done when |
 |---|---|---|
-| **0. Foundation** | `sec_client.py`, `facts.py` extracted from existing code and extended with **filing-date awareness**; config scaffolding | Point-in-time queries return only facts filed by a given date, proven by test |
-| **1. Universe** | `universe.py` — sub-segments, liquidity and profitability screens, membership history | Universe reproducible for any historical date, with a stability-flag report |
+| **0. Foundation** ✅ | `sec_client.py`, `facts.py` — point-in-time fact resolution, currency detection, cache TTLs; config scaffolding | **Done.** PIT gate proven by test; NVIDIA's revenue matches its reported fiscal years at every as-of date |
+| **1. Universe** ✅ | `universe.py`, `prices.py` — split-aware prices, market-cap/liquidity/cash screens, dated snapshots and diffs | **Done.** 40/41 names screen through, TSMC flagged `INSUFFICIENT_DATA`, unevaluated screens recorded rather than passed |
 | **2. Fundamentals** | `fundamentals.py` — statements, TTM chaining, derived ratios, coverage report | Every ratio traces to filed facts; coverage gaps reported, never guessed |
 | **3. Quality** | `quality.py` — Piotroski, Altman Z''/Z variant selection, ROIC−WACC, FCF conversion | Hand-verified against filings for 3–5 names across segments |
 | **4. Valuation** | `valuation.py` — DCF with mandatory sensitivity grid, relative multiples, margin of safety | Outputs a bear/base/bull range; sanity-checked against published analyst fair values |

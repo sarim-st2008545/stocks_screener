@@ -177,6 +177,7 @@ class FactSet:
         currency: str | None = None,
     ):
         payload = (facts or {}).get("facts", {})
+        self._payload = payload
         self._taxonomies = [payload.get(t, {}) for t in taxonomies if t in payload]
         self.as_of = as_of or date.today()
         self.max_instant_age_days = max_instant_age_days
@@ -394,6 +395,66 @@ class FactSet:
         missing, not as zero.
         """
         return {c: self.has(c) for c in concepts}
+
+    # -- share counts -------------------------------------------------------
+
+    # Cover-page share count first: it is the most recent figure a filer
+    # publishes and is stated as of the filing date rather than a period end.
+    SHARE_CONCEPTS: tuple[tuple[str, str], ...] = (
+        ("dei", "EntityCommonStockSharesOutstanding"),
+        ("us-gaap", "CommonStockSharesOutstanding"),
+        ("us-gaap", "CommonStockSharesIssued"),
+        ("us-gaap", "WeightedAverageNumberOfDilutedSharesOutstanding"),
+    )
+
+    def shares_outstanding(self) -> Fact | None:
+        """Point-in-time share count, in shares rather than currency.
+
+        Returns None rather than a guess for multi-class filers. SEC's
+        `companyfacts` strips XBRL dimensions, so Alphabet and Meta report a
+        per-class breakdown that arrives without the class labels — the parts
+        are visible but which is which is not. A missing share count produces a
+        missing market cap, which is recoverable; a wrong one silently corrupts
+        every valuation multiple built on it.
+        """
+        for taxonomy, concept in self.SHARE_CONCEPTS:
+            facts = self._facts_in_unit(taxonomy, concept, "shares")
+            if not facts:
+                continue
+            latest_end = max(f.end for f in facts)
+            current = [f for f in facts if f.end == latest_end]
+            # Several same-period values with no dimension labels means multiple
+            # share classes. Summing them would be a guess.
+            if len({round(f.value) for f in current}) > 1:
+                continue
+            return max(current, key=lambda f: (f.filed or date.min))
+        return None
+
+    def _facts_in_unit(self, taxonomy: str, concept: str, unit: str) -> list[Fact]:
+        """Point-in-time facts for a concept measured in a non-currency unit."""
+        entries = (
+            self._payload.get(taxonomy, {}).get(concept, {}).get("units", {}).get(unit, [])
+        )
+        cutoff = self.as_of - timedelta(days=self.max_instant_age_days)
+        out: list[Fact] = []
+        for entry in entries:
+            end = parse_date(entry.get("end"))
+            value = entry.get("val")
+            if end is None or value is None or end < cutoff:
+                continue
+            fact = Fact(
+                concept=concept,
+                value=float(value),
+                end=end,
+                start=parse_date(entry.get("start")),
+                form=entry.get("form") or "",
+                filed=parse_date(entry.get("filed")),
+                unit=unit,
+                accession=entry.get("accn"),
+            )
+            if fact.known_by(self.as_of):
+                out.append(fact)
+        return out
 
     def latest_filing_date(self) -> date | None:
         """Filing date of the most recent fact visible at as_of.
