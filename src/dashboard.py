@@ -163,6 +163,7 @@ class Snapshot:
     ledger: portfolio_mod.Ledger
     plan: portfolio_mod.Plan | None
     prices_by_ticker: dict[str, float]
+    constituents: dict[str, dict] = None
     backtest_text: str | None = None
 
 
@@ -174,6 +175,8 @@ def gather(
     as_of = as_of or date.today()
     board = _latest(config.DATA_DIR / "pit" / "scores") or {}
     scores = {e["ticker"]: e for e in board.get("scores", [])}
+    snap = _latest(config.DATA_DIR / "pit" / "universe") or {}
+    constituents = {c["ticker"]: c for c in snap.get("constituents", [])}
 
     ledger = ledger or portfolio_mod.Ledger.load()
     signal_set = signal_set or signals_mod.SignalSet(as_of, [])
@@ -228,6 +231,7 @@ def gather(
         ledger=ledger,
         plan=plan,
         prices_by_ticker=prices_by_ticker,
+        constituents=constituents,
         backtest_text=latest_backtest,
     )
 
@@ -360,6 +364,80 @@ def render(snapshot: Snapshot) -> str:
         )
         parts.append("</section>")
 
+    # -- universe -----------------------------------------------------------
+    scores = snapshot.scores or {}
+    constituents = snapshot.constituents or {}
+    if scores or constituents:
+        ranked = sorted(
+            scores.values(),
+            key=lambda e: -(e.get("composite") or -1),
+        )
+        parts.append("<section><h2>The universe</h2>")
+        parts.append(
+            f'<p class="note">All {len(constituents) or len(scores)} candidate names, '
+            "ranked by composite score. Pillar scores are percentile ranks <em>within "
+            "this pool</em> &mdash; a quality score of 80 means more profitable and "
+            "higher-returning than 80% of the names you could actually buy, not an "
+            "absolute grade. Cycle position sits beside the score rather than inside "
+            "it, because a company at peak margins scores well precisely because its "
+            "margins are peaking.</p>"
+        )
+        parts.append('<div class="scroll"><table><thead><tr>'
+                     "<th>#</th><th>Ticker</th><th>Company</th><th>Segment</th>"
+                     "<th>Market cap</th><th>Score</th><th>Quality</th><th>Strength</th>"
+                     "<th>Value</th><th>Growth</th><th>Cycle</th><th>Flags</th>"
+                     "</tr></thead><tbody>")
+        for entry in ranked:
+            ticker = entry["ticker"]
+            meta = constituents.get(ticker, {})
+            pillars = entry.get("pillars") or {}
+            cap = meta.get("market_cap")
+            cap_text = "—" if not cap else (
+                f"${cap/1e12:,.2f}T" if cap >= 1e12 else f"${cap/1e9:,.0f}B"
+            )
+            flags: list[str] = []
+            if entry.get("earnings_repeatable") is False:
+                flags.append('<span class="pill warn">peak earnings</span>')
+            if entry.get("stability_flag"):
+                flags.append('<span class="pill warn">stability</span>')
+            for missing in entry.get("missing_pillars") or []:
+                flags.append(f'<span class="pill muted">no {_esc(missing[:9])}</span>')
+            parts.append(
+                f'<tr><td class="num">{entry.get("rank") or "—"}</td>'
+                f'<td class="item">{_esc(ticker)}</td>'
+                f'<td class="src">{_esc((meta.get("company_name") or "")[:26])}</td>'
+                f'<td class="src">{_esc(meta.get("segment", ""))}</td>'
+                f'<td class="num">{cap_text}</td>'
+                f'<td class="num"><strong>{_num(entry.get("composite"))}</strong></td>'
+                f'<td class="num">{_num(pillars.get("quality"))}</td>'
+                f'<td class="num">{_num(pillars.get("financial_strength"))}</td>'
+                f'<td class="num">{_num(pillars.get("valuation"))}</td>'
+                f'<td class="num">{_num(pillars.get("growth"))}</td>'
+                f'<td class="src">{_esc(entry.get("cycle_position", ""))}</td>'
+                f'<td>{" ".join(flags)}</td></tr>'
+            )
+        # names carried through unscored, so the page shows what was excluded
+        unscored = [
+            c for t, c in constituents.items()
+            if t not in scores or scores[t].get("composite") is None
+        ]
+        parts.append("</tbody></table></div>")
+        for entry in unscored:
+            reasons = "; ".join(entry.get("failures") or []) or entry.get("status", "")
+            parts.append(
+                f'<p class="note"><strong>{_esc(entry["ticker"])}</strong> is not scored: '
+                f'{_esc(reasons)}. Held through the sector ETF instead of analysed.</p>'
+            )
+        parts.append(
+            '<p class="note">For any single name in full &mdash; every line item with the '
+            "SEC concept it came from, all 17 ratios, the quality frameworks signal by "
+            "signal, cycle position and valuation &mdash; run "
+            "<code>python -m src.note NVDA</code>. Add "
+            "<code>--as-of 2022-06-30</code> to see the company as it looked on a past "
+            "date, using only what was filed by then.</p>"
+        )
+        parts.append("</section>")
+
     # -- decisions ----------------------------------------------------------
     if snapshot.signals:
         parts.append("<section><h2>Decisions</h2>")
@@ -386,6 +464,16 @@ def render(snapshot: Snapshot) -> str:
                 f'<td class="src">{_esc(against)}</td></tr>'
             )
         parts.append("</tbody></table></div></section>")
+
+    if not snapshot.signals:
+        parts.append(
+            '<div class="callout"><h3>Decisions not rebuilt in this render</h3>'
+            '<p class="note">This page was generated from saved data only, which is '
+            "instant. To recompute every decision from current filings, run "
+            "<code>python -m src.dashboard --open</code> without "
+            "<code>--no-signals</code> &mdash; it re-analyses all 41 names and takes a "
+            "few minutes.</p></div>"
+        )
 
     # -- validation ---------------------------------------------------------
     parts.append("<section><h2>Validation</h2>")
