@@ -1,4 +1,4 @@
-# AI Infrastructure Equity Research & Portfolio System
+# AI Infrastructure Equity Research & Portfolio Systems
 
 A fundamentals-first research and portfolio-management system for long-term investing in
 the AI infrastructure sector — semiconductors, memory, fab equipment, data-center power,
