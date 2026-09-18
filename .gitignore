@@ -12,6 +12,9 @@ __pycache__/
 # Data: regenerable from SEC/market sources, and large
 data/
 !data/.gitkeep
+!data/records.db
+!data/galaxy/
+!data/prices/
 
 # Virtualenvs
 .venv/
