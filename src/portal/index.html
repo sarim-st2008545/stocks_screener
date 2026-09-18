@@ -673,6 +673,61 @@
     </div>
   </div>
 
+  <!-- ================================================================= -->
+  <!-- MODAL: EDIT ACTIVE TRADE -->
+  <!-- ================================================================= -->
+  <div id="modal-edit-trade" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 border border-border">
+      <div class="flex items-center justify-between border-b border-border pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xs font-bold">✎</div>
+          <h3 class="text-sm font-bold text-white uppercase tracking-wider">Edit Position: <span id="edit-trade-ticker" class="text-cyan-400 mono"></span></h3>
+        </div>
+        <button onclick="closeEditTradeModal()" class="text-slate-400 hover:text-white text-lg cursor-pointer">&times;</button>
+      </div>
+
+      <input type="hidden" id="edit-trade-id" value="">
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs font-semibold text-slate-300 block mb-1">Shares</label>
+          <input id="edit-trade-shares" type="number" step="0.0001" class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-white mono text-sm focus:outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-300 block mb-1">Entry Price ($)</label>
+          <input id="edit-trade-price" type="number" step="0.01" class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-white mono text-sm focus:outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-rose-400 block mb-1">Stop Loss ($)</label>
+          <input id="edit-trade-stop" type="number" step="0.01" class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-rose-300 mono text-sm focus:outline-none focus:border-rose-500">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-emerald-400 block mb-1">Target Price ($)</label>
+          <input id="edit-trade-target" type="number" step="0.01" class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-emerald-300 mono text-sm focus:outline-none focus:border-emerald-500">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-300 block mb-1">Entry Date</label>
+          <input id="edit-trade-date" type="text" placeholder="YYYY-MM-DD" class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-white mono text-xs focus:outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-300 block mb-1">Notes</label>
+          <input id="edit-trade-notes" type="text" class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-slate-300 text-xs focus:outline-none focus:border-cyan-500">
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between pt-3 border-t border-border/60">
+        <button onclick="deleteCurrentTrade()" class="px-3 py-2 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/80 text-xs font-bold text-rose-300 flex items-center gap-1.5 transition-all cursor-pointer">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          <span>Delete Position</span>
+        </button>
+        <div class="flex gap-2">
+          <button onclick="closeEditTradeModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white cursor-pointer">Cancel</button>
+          <button onclick="submitEditTrade()" class="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-xs font-bold text-white shadow cursor-pointer">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- JAVASCRIPT LOGIC -->
   <script>
     let currentTab = 'signals'; // Signals is the main dashboard landing page
@@ -915,9 +970,15 @@
               <div class="${pnlColor} text-[11px]">${pnlSign}${t.unrealized_pnl_pct.toFixed(2)}%</div>
             </td>
             <td class="py-4 px-6 text-right">
-              <button onclick="openExitModal(${t.id})" class="px-3 py-1.5 rounded-lg bg-card hover:bg-rose-950/60 hover:text-rose-300 hover:border-rose-700/80 border border-border text-xs font-semibold text-slate-300 transition-all cursor-pointer">
-                Close
-              </button>
+              <div class="flex items-center justify-end gap-1.5">
+                <button onclick="openEditTradeModal(${t.id})" class="px-2.5 py-1.5 rounded-lg bg-card hover:bg-cyan-950/60 hover:text-cyan-300 hover:border-cyan-700/80 border border-border text-xs font-semibold text-slate-300 transition-all cursor-pointer flex items-center gap-1">
+                  <svg class="w-3 h-3 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                  <span>Edit</span>
+                </button>
+                <button onclick="openExitModal(${t.id})" class="px-2.5 py-1.5 rounded-lg bg-card hover:bg-rose-950/60 hover:text-rose-300 hover:border-rose-700/80 border border-border text-xs font-semibold text-slate-300 transition-all cursor-pointer">
+                  Close
+                </button>
+              </div>
             </td>
           </tr>
         `;
@@ -1347,6 +1408,90 @@
         loadDashboard();
       } else {
         alert('Error: ' + (data.error || 'Failed to close trade'));
+      }
+    }
+
+    // Edit & Delete Active Trade Modal Handlers
+    function openEditTradeModal(tradeId) {
+      const t = (cachedActiveTrades || []).find(x => x.id === tradeId);
+      if (!t) return;
+      document.getElementById('edit-trade-id').value = t.id;
+      document.getElementById('edit-trade-ticker').textContent = t.ticker;
+      document.getElementById('edit-trade-shares').value = t.shares;
+      document.getElementById('edit-trade-price').value = t.entry_price.toFixed(2);
+      document.getElementById('edit-trade-stop').value = t.stop_loss ? t.stop_loss.toFixed(2) : '';
+      document.getElementById('edit-trade-target').value = t.target_price ? t.target_price.toFixed(2) : '';
+      document.getElementById('edit-trade-date').value = t.entry_date || '';
+      document.getElementById('edit-trade-notes').value = t.notes || '';
+      document.getElementById('modal-edit-trade').classList.remove('hidden');
+    }
+
+    function closeEditTradeModal() {
+      document.getElementById('modal-edit-trade').classList.add('hidden');
+    }
+
+    async function submitEditTrade() {
+      const tradeId = parseInt(document.getElementById('edit-trade-id').value);
+      const shares = parseFloat(document.getElementById('edit-trade-shares').value);
+      const entryPrice = parseFloat(document.getElementById('edit-trade-price').value);
+      const stopLoss = parseFloat(document.getElementById('edit-trade-stop').value);
+      const targetPrice = parseFloat(document.getElementById('edit-trade-target').value);
+      const entryDate = document.getElementById('edit-trade-date').value.trim();
+      const notes = document.getElementById('edit-trade-notes').value.trim();
+
+      if (isNaN(shares) || shares <= 0) return alert('Please enter a valid number of shares');
+      if (isNaN(entryPrice) || entryPrice <= 0) return alert('Please enter a valid entry price');
+
+      try {
+        const res = await fetch('/api/trades/edit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            trade_id: tradeId,
+            shares: shares,
+            entry_price: entryPrice,
+            stop_loss: isNaN(stopLoss) ? null : stopLoss,
+            target_price: isNaN(targetPrice) ? null : targetPrice,
+            entry_date: entryDate || null,
+            notes: notes
+          })
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          closeEditTradeModal();
+          cachedActiveTrades = null;
+          cachedPortfolio = null;
+          loadDashboard();
+        } else {
+          alert('Error: ' + (data.error || 'Failed to update trade'));
+        }
+      } catch (err) {
+        alert('Network error: ' + err);
+      }
+    }
+
+    async function deleteCurrentTrade() {
+      const tradeId = parseInt(document.getElementById('edit-trade-id').value);
+      const ticker = document.getElementById('edit-trade-ticker').textContent;
+      if (!confirm(`Are you sure you want to delete position ${ticker}? This will permanently remove it.`)) return;
+
+      try {
+        const res = await fetch('/api/trades/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trade_id: tradeId })
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          closeEditTradeModal();
+          cachedActiveTrades = null;
+          cachedPortfolio = null;
+          loadDashboard();
+        } else {
+          alert('Error: ' + (data.error || 'Failed to delete trade'));
+        }
+      } catch (err) {
+        alert('Network error: ' + err);
       }
     }
 

@@ -137,3 +137,48 @@ def test_portal_api_scan():
     res = handler.get_response_json()
     assert res["status"] == "ok"
 
+
+def test_portal_api_edit_and_delete_trade():
+    open_handler = MockPortalServer("POST", "/api/trades/open", body={
+        "system": "galaxy",
+        "ticker": "PATH",
+        "shares": 10,
+        "entry_price": 12.0,
+        "stop_loss": 11.0,
+        "target_price": 14.0,
+        "entry_date": "2026-09-17"
+    })
+    assert open_handler.response_code == 200
+    trade_id = open_handler.get_response_json()["trade_id"]
+
+    # Edit trade
+    edit_handler = MockPortalServer("POST", "/api/trades/edit", body={
+        "trade_id": trade_id,
+        "shares": 2,
+        "entry_price": 12.25,
+        "stop_loss": 11.20,
+        "target_price": 14.50,
+        "notes": "Updated note"
+    })
+    assert edit_handler.response_code == 200
+    assert edit_handler.get_response_json()["status"] == "ok"
+
+    # Verify active reflects edit
+    active_handler = MockPortalServer("GET", "/api/trades/active")
+    active_trades = active_handler.get_response_json()
+    matching = [t for t in active_trades if t["id"] == trade_id]
+    assert len(matching) == 1
+    assert matching[0]["shares"] == 2
+    assert matching[0]["entry_price"] == 12.25
+
+    # Delete trade
+    del_handler = MockPortalServer("POST", "/api/trades/delete", body={"trade_id": trade_id})
+    assert del_handler.response_code == 200
+    assert del_handler.get_response_json()["status"] == "ok"
+
+    # Verify active trades empty
+    active_handler2 = MockPortalServer("GET", "/api/trades/active")
+    matching2 = [t for t in active_handler2.get_response_json() if t["id"] == trade_id]
+    assert len(matching2) == 0
+
+

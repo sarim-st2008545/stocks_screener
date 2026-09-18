@@ -521,6 +521,83 @@ def close_trade(
     return True
 
 
+def edit_trade(
+    trade_id: int,
+    shares: Optional[float] = None,
+    entry_price: Optional[float] = None,
+    stop_loss: Optional[float] = None,
+    target_price: Optional[float] = None,
+    entry_date: Optional[str] = None,
+    notes: Optional[str] = None,
+    db_path: Optional[Path] = None,
+) -> bool:
+    """Updates an existing open trade's parameters (shares, prices, notes)."""
+    init_db(db_path)
+    conn = get_connection(db_path)
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM trades WHERE id = ?", (trade_id,))
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        return False
+
+    updates = []
+    params = []
+    if shares is not None:
+        updates.append("shares = ?")
+        params.append(float(shares))
+    if entry_price is not None:
+        updates.append("entry_price = ?")
+        params.append(float(entry_price))
+    if stop_loss is not None:
+        updates.append("stop_loss = ?")
+        params.append(float(stop_loss))
+    if target_price is not None:
+        updates.append("target_price = ?")
+        params.append(float(target_price))
+    if entry_date is not None:
+        updates.append("entry_date = ?")
+        params.append(str(entry_date))
+    if notes is not None:
+        updates.append("notes = ?")
+        params.append(str(notes))
+
+    if not updates:
+        conn.close()
+        return True
+
+    params.append(trade_id)
+    sql = f"UPDATE trades SET {', '.join(updates)} WHERE id = ?"
+    cur.execute(sql, params)
+    conn.commit()
+    conn.close()
+    return True
+
+
+def delete_trade(trade_id: int, db_path: Optional[Path] = None) -> bool:
+    """Permanently deletes a trade from the database."""
+    init_db(db_path)
+    conn = get_connection(db_path)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM trades WHERE id = ?", (trade_id,))
+    deleted = cur.rowcount > 0
+    conn.commit()
+    conn.close()
+    return deleted
+
+
+def clear_all_trades(db_path: Optional[Path] = None) -> int:
+    """Clears all trades (both open and closed) from the database."""
+    init_db(db_path)
+    conn = get_connection(db_path)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM trades")
+    count = cur.rowcount
+    conn.commit()
+    conn.close()
+    return count
+
+
 def get_active_trades(
     latest_prices: Optional[dict[str, float]] = None,
     db_path: Optional[Path] = None,

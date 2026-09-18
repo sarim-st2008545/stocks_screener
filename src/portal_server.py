@@ -246,6 +246,53 @@ class PortalRequestHandler(BaseHTTPRequestHandler):
                 self.send_json({"error": str(e)}, status=HTTPStatus.BAD_REQUEST)
             return
 
+        elif path == "/api/trades/edit":
+            try:
+                trade_id = int(payload["trade_id"])
+                shares = float(payload["shares"]) if "shares" in payload and payload["shares"] is not None else None
+                entry_price = float(payload["entry_price"]) if "entry_price" in payload and payload["entry_price"] is not None else None
+                stop_loss = float(payload["stop_loss"]) if "stop_loss" in payload and payload["stop_loss"] is not None else None
+                target_price = float(payload["target_price"]) if "target_price" in payload and payload["target_price"] is not None else None
+                entry_date = payload.get("entry_date")
+                notes = payload.get("notes")
+
+                success = records.edit_trade(
+                    trade_id=trade_id,
+                    shares=shares,
+                    entry_price=entry_price,
+                    stop_loss=stop_loss,
+                    target_price=target_price,
+                    entry_date=entry_date,
+                    notes=notes,
+                )
+                if success:
+                    self.send_json({"status": "ok", "trade_id": trade_id})
+                else:
+                    self.send_json({"error": "Trade not found"}, status=HTTPStatus.NOT_FOUND)
+            except Exception as e:
+                self.send_json({"error": str(e)}, status=HTTPStatus.BAD_REQUEST)
+            return
+
+        elif path == "/api/trades/delete":
+            try:
+                trade_id = int(payload["trade_id"])
+                success = records.delete_trade(trade_id=trade_id)
+                if success:
+                    self.send_json({"status": "ok", "trade_id": trade_id})
+                else:
+                    self.send_json({"error": "Trade not found"}, status=HTTPStatus.NOT_FOUND)
+            except Exception as e:
+                self.send_json({"error": str(e)}, status=HTTPStatus.BAD_REQUEST)
+            return
+
+        elif path == "/api/trades/clear":
+            try:
+                count = records.clear_all_trades()
+                self.send_json({"status": "ok", "deleted_count": count})
+            except Exception as e:
+                self.send_json({"error": str(e)}, status=HTTPStatus.BAD_REQUEST)
+            return
+
         elif path == "/api/scan":
             scan_target = payload.get("target", "both")
             refresh = bool(payload.get("refresh", False))

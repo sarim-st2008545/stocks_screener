@@ -236,3 +236,65 @@ def test_get_analytics_and_forecast(test_db):
     assert analytics["summary"]["actual_trades_count"] == 1
     assert "forecast_30d_pnl" in analytics["forecast"]
 
+
+def test_edit_delete_and_clear_trades(test_db):
+    # Open trade with typo (e.g. 10 shares instead of 1)
+    trade_id = records.open_trade(
+        system="galaxy",
+        ticker="INOD",
+        shares=10,
+        entry_price=15.00,
+        stop_loss=14.00,
+        target_price=17.00,
+        entry_date="2026-09-17",
+        db_path=test_db,
+    )
+    assert trade_id > 0
+
+    active = records.get_active_trades(db_path=test_db)
+    assert len(active) == 1
+    assert active[0]["shares"] == 10
+    assert active[0]["entry_price"] == 15.00
+
+    # Edit trade to 1 share and updated target
+    edited = records.edit_trade(
+        trade_id=trade_id,
+        shares=1,
+        entry_price=15.25,
+        stop_loss=14.20,
+        target_price=17.50,
+        notes="Corrected shares to 1",
+        db_path=test_db,
+    )
+    assert edited is True
+
+    active_after_edit = records.get_active_trades(db_path=test_db)
+    assert len(active_after_edit) == 1
+    t = active_after_edit[0]
+    assert t["shares"] == 1
+    assert t["entry_price"] == 15.25
+    assert t["stop_loss"] == 14.20
+    assert t["target_price"] == 17.50
+    assert t["notes"] == "Corrected shares to 1"
+
+    # Delete trade
+    deleted = records.delete_trade(trade_id=trade_id, db_path=test_db)
+    assert deleted is True
+    assert len(records.get_active_trades(db_path=test_db)) == 0
+
+    # Open another trade and test clear_all_trades
+    records.open_trade(
+        system="galaxy",
+        ticker="PATH",
+        shares=5,
+        entry_price=12.00,
+        stop_loss=11.00,
+        target_price=13.50,
+        db_path=test_db,
+    )
+    assert len(records.get_active_trades(db_path=test_db)) == 1
+    cleared_count = records.clear_all_trades(db_path=test_db)
+    assert cleared_count >= 1
+    assert len(records.get_active_trades(db_path=test_db)) == 0
+
+
