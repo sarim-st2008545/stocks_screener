@@ -22,42 +22,68 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-import pandas as pd
+import time
 
 from src import records
 
 PORTAL_DIR = Path(__file__).parent / "portal"
 
+_LATEST_PRICES_CACHE: dict[str, float] = {}
+_LATEST_PRICES_CACHE_TIME: float = 0.0
+_CACHE_TTL_SECONDS: float = 30.0
 
-def get_latest_cached_prices() -> dict[str, float]:
+
+def _fast_extract_last_close(filepath: Path) -> float | None:
+    """Reads only the tail bytes of a CSV file to extract the latest closing price without loading pandas."""
+    try:
+        with open(filepath, "rb") as f:
+            f.seek(0, os.SEEK_END)
+            size = f.tell()
+            if size == 0:
+                return None
+            f.seek(max(0, size - 1024))
+            chunk = f.read().decode("utf-8", errors="ignore")
+            lines = chunk.splitlines()
+            non_empty = [l.strip() for l in lines if l.strip()]
+            if not non_empty:
+                return None
+            parts = non_empty[-1].split(",")
+            if len(parts) >= 5:
+                return float(parts[4])
+    except Exception:
+        pass
+    return None
+
+
+def get_latest_cached_prices(force_refresh: bool = False) -> dict[str, float]:
     """Scans cached CSV price data from data/prices/ and data/galaxy/ to get latest closing prices."""
+    global _LATEST_PRICES_CACHE, _LATEST_PRICES_CACHE_TIME
+    now = time.time()
+    if not force_refresh and _LATEST_PRICES_CACHE and (now - _LATEST_PRICES_CACHE_TIME < _CACHE_TTL_SECONDS):
+        return _LATEST_PRICES_CACHE
+
     prices: dict[str, float] = {}
 
     # Check data/prices/ (Universe)
     p_dir = Path("data/prices")
     if p_dir.exists():
         for f in p_dir.glob("*.csv"):
-            ticker = f.stem
-            try:
-                # Read last 2 rows
-                df = pd.read_csv(f, index_col=0)
-                if not df.empty and "close" in df.columns:
-                    prices[ticker.upper()] = float(df["close"].iloc[-1])
-            except Exception:
-                pass
+            ticker = f.stem.upper()
+            val = _fast_extract_last_close(f)
+            if val is not None:
+                prices[ticker] = val
 
     # Check data/galaxy/ (Galaxy)
     g_dir = Path("data/galaxy")
     if g_dir.exists():
         for f in g_dir.glob("*.csv"):
-            ticker = f.stem.replace("_5y", "")
-            try:
-                df = pd.read_csv(f, index_col=0)
-                if not df.empty and "close" in df.columns:
-                    prices[ticker.upper()] = float(df["close"].iloc[-1])
-            except Exception:
-                pass
+            ticker = f.stem.replace("_5y", "").upper()
+            val = _fast_extract_last_close(f)
+            if val is not None:
+                prices[ticker] = val
 
+    _LATEST_PRICES_CACHE = prices
+    _LATEST_PRICES_CACHE_TIME = now
     return prices
 
 
@@ -234,6 +260,7 @@ class PortalRequestHandler(BaseHTTPRequestHandler):
 
                 # Auto-evaluate outcomes across all signals
                 evaluated_count = records.auto_evaluate_all_signals()
+                get_latest_cached_prices(force_refresh=True)
                 results["evaluated_count"] = evaluated_count
                 results["message"] = f"Scanners executed successfully. Evaluated {evaluated_count} signal outcomes."
             except Exception as e:

@@ -235,6 +235,46 @@ def load_all_cached_price_histories() -> dict[str, pd.DataFrame]:
     return histories
 
 
+def load_price_history_for_ticker(ticker: str) -> Optional[pd.DataFrame]:
+    """Loads price history for a single ticker from disk."""
+    sym = ticker.upper()
+    # Check data/prices/
+    p_path = Path("data/prices") / f"{sym}.csv"
+    if p_path.exists():
+        try:
+            df = pd.read_csv(p_path, index_col=0, parse_dates=True)
+            if not df.empty:
+                df.columns = [c.lower() for c in df.columns]
+                return df
+        except Exception:
+            pass
+
+    # Check data/galaxy/
+    g_path = Path("data/galaxy") / f"{sym}_5y.csv"
+    if not g_path.exists():
+        g_path = Path("data/galaxy") / f"{sym}.csv"
+    if g_path.exists():
+        try:
+            df = pd.read_csv(g_path, index_col=0, parse_dates=True)
+            if not df.empty:
+                df.columns = [c.lower() for c in df.columns]
+                return df
+        except Exception:
+            pass
+
+    return None
+
+
+def load_price_histories_for_tickers(tickers: set[str]) -> dict[str, pd.DataFrame]:
+    """Loads price histories for specific requested tickers only."""
+    histories: dict[str, pd.DataFrame] = {}
+    for t in tickers:
+        df = load_price_history_for_ticker(t)
+        if df is not None:
+            histories[t.upper()] = df
+    return histories
+
+
 def auto_evaluate_all_signals(
     price_histories: Optional[dict[str, pd.DataFrame]] = None,
     db_path: Path = DB_PATH,
@@ -242,17 +282,25 @@ def auto_evaluate_all_signals(
     """
     Evaluates ALL signals in the database (both traded and untraded).
     Updates status to HIT_TARGET, HIT_STOP, EXPIRED, or IN_PLAY with outcome P&L %.
+    Only loads price histories for tickers that have unresolved signals.
     """
     init_db(db_path)
-    if price_histories is None:
-        price_histories = load_all_cached_price_histories()
-    if not price_histories:
-        return 0
-
     conn = get_connection(db_path)
     cur = conn.cursor()
     cur.execute("SELECT * FROM signals WHERE status IN ('PENDING', 'ACTIVE', 'IN_PLAY')")
     signals = cur.fetchall()
+    if not signals:
+        conn.close()
+        return 0
+
+    if price_histories is None:
+        needed_tickers = {s["ticker"].upper() for s in signals}
+        price_histories = load_price_histories_for_tickers(needed_tickers)
+
+    if not price_histories:
+        conn.close()
+        return 0
+
     updated_count = 0
 
     for s in signals:
@@ -350,8 +398,6 @@ def get_signals_grouped_by_date(
 ) -> dict[str, list[dict[str, Any]]]:
     """Retrieves all signals grouped chronologically by signal_date descending."""
     init_db(db_path)
-    # Auto-evaluate before returning so status is fresh
-    auto_evaluate_all_signals(db_path=db_path)
 
     conn = get_connection(db_path)
     cur = conn.cursor()
@@ -594,7 +640,6 @@ def get_analytics_and_forecast(
     3. Forward Forecast: 30-day and 90-day probabilistic projections.
     """
     init_db(db_path)
-    auto_evaluate_all_signals(db_path=db_path)
 
     total_capital = float(get_setting("total_capital", "10000.0", db_path=db_path))
 

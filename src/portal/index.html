@@ -136,8 +136,8 @@
         </nav>
 
         <!-- Right: Status Badge -->
-        <div class="flex items-center gap-3">
-          <div class="hidden lg:flex items-center gap-2.5 px-4 py-2 rounded-xl bg-card border border-border text-xs">
+        <div class="flex items-center gap-2">
+          <div class="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-card border border-border text-xs">
             <span class="text-slate-400">Floating P&L:</span>
             <span id="stat-unrealized-pnl-header" class="font-bold mono text-emerald-400">$0.00</span>
           </div>
@@ -148,20 +148,38 @@
   </header>
 
   <!-- Mobile Navigation Bar -->
-  <div class="md:hidden bg-card border-b border-border px-4 py-2.5 flex items-center justify-between gap-1 overflow-x-auto shrink-0">
-    <button onclick="switchTab('signals')" class="text-xs px-3 py-1.5 rounded-lg text-white bg-cyan-600 font-semibold">Setups</button>
-    <button onclick="switchTab('dashboard')" class="text-xs px-3 py-1.5 rounded-lg text-slate-300 font-medium">My Trades</button>
-    <button onclick="switchTab('forecast')" class="text-xs px-3 py-1.5 rounded-lg text-slate-300 font-medium">Forecast</button>
-    <button onclick="switchTab('history')" class="text-xs px-3 py-1.5 rounded-lg text-slate-300 font-medium">History</button>
+  <div class="md:hidden bg-card border-b border-border px-3 py-2 flex items-center justify-between gap-1 overflow-x-auto shrink-0 z-30">
+    <button id="mobile-tab-signals-btn" onclick="switchTab('signals')" class="text-xs px-3 py-1.5 rounded-lg text-white bg-cyan-600 font-semibold cursor-pointer whitespace-nowrap shadow-sm">⚡ Setups</button>
+    <button id="mobile-tab-dashboard-btn" onclick="switchTab('dashboard')" class="text-xs px-3 py-1.5 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer whitespace-nowrap">💼 My Trades (<span id="mobile-nav-active-count">1</span>)</button>
+    <button id="mobile-tab-forecast-btn" onclick="switchTab('forecast')" class="text-xs px-3 py-1.5 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer whitespace-nowrap">📈 Forecast</button>
+    <button id="mobile-tab-history-btn" onclick="switchTab('history')" class="text-xs px-3 py-1.5 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer whitespace-nowrap">📜 History</button>
+  </div>
+
+  <!-- Mobile Action Center & Cash Strip -->
+  <div class="md:hidden bg-surface/95 border-b border-border px-3.5 py-2 flex items-center justify-between gap-2 shrink-0 z-30">
+    <div class="flex items-center gap-2">
+      <button id="mobile-scan-btn" onclick="triggerScanner()" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-xs font-bold text-white flex items-center gap-1.5 shadow-md shadow-cyan-900/30 cursor-pointer">
+        <svg id="mobile-scan-icon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        <span id="mobile-scan-btn-text">Run Scanners</span>
+      </button>
+      <button onclick="openNewTradeModal()" class="px-2.5 py-1.5 rounded-lg bg-card hover:bg-card/80 border border-border text-xs font-semibold text-white flex items-center gap-1 cursor-pointer">
+        <span class="text-cyan-400 font-bold">+</span>
+        <span>Trade</span>
+      </button>
+    </div>
+    <div class="text-right">
+      <div class="text-[9px] text-slate-500 uppercase">Cash Avail</div>
+      <div id="mobile-stat-cash-available" class="text-xs font-bold mono text-cyan-400">$808.00</div>
+    </div>
   </div>
 
   <!-- ================================================================= -->
-  <!-- MAIN LAYOUT: FIXED LEFT SIDEBAR + SCROLLABLE CONTENT VIEWPORT -->
+  <!-- MAIN LAYOUT: FIXED LEFT SIDEBAR (DESKTOP) + SCROLLABLE VIEWPORT -->
   <!-- ================================================================= -->
   <div class="flex-1 w-full flex flex-col md:flex-row overflow-hidden min-h-0">
 
-    <!-- FIXED LEFT SIDEBAR: Independent, non-scrolling, permanent anchor -->
-    <aside class="w-full md:w-64 lg:w-72 bg-surface/95 border-b md:border-b-0 md:border-r border-border p-4 sm:p-5 flex flex-col justify-between shrink-0 h-full overflow-y-auto space-y-6">
+    <!-- FIXED LEFT SIDEBAR: Desktop only anchor -->
+    <aside class="hidden md:flex md:w-64 lg:w-72 bg-surface/95 border-r border-border p-4 sm:p-5 flex-col justify-between shrink-0 h-full overflow-y-auto space-y-6">
       
       <div class="space-y-6">
         
@@ -244,7 +262,7 @@
     </aside>
 
     <!-- RIGHT MAIN CONTENT VIEWPORT -->
-    <main class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+    <main class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto w-full min-w-0">
 
       <!-- ================================================================= -->
       <!-- TAB 1: SIGNALS & SETUPS STREAM (DEFAULT MAIN DASHBOARD) -->
@@ -656,8 +674,11 @@
   <!-- JAVASCRIPT LOGIC -->
   <script>
     let currentTab = 'signals'; // Signals is the main dashboard landing page
-    let cachedPortfolio = {};
-    let cachedActiveTrades = [];
+    let cachedPortfolio = null;
+    let cachedActiveTrades = null;
+    let cachedSignalsData = {}; // keyed by system filter: 'all', 'galaxy', 'universe'
+    let cachedForecastData = null;
+    let cachedHistoryData = null;
     let currentSignalFilter = '';
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -677,12 +698,22 @@
 
       const tabs = ['signals', 'dashboard', 'forecast', 'history'];
       tabs.forEach(t => {
+        // Desktop nav button
         const btn = document.getElementById(`tab-${t}-btn`);
         if (btn) {
           if (t === tab) {
             btn.className = 'px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-cyan-600 text-white shadow-md shadow-cyan-900/30 flex items-center gap-2 cursor-pointer';
           } else {
             btn.className = 'px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-2 cursor-pointer';
+          }
+        }
+        // Mobile nav button
+        const mBtn = document.getElementById(`mobile-tab-${t}-btn`);
+        if (mBtn) {
+          if (t === tab) {
+            mBtn.className = 'text-xs px-3 py-1.5 rounded-lg text-white bg-cyan-600 font-semibold cursor-pointer whitespace-nowrap shadow-sm';
+          } else {
+            mBtn.className = 'text-xs px-3 py-1.5 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer whitespace-nowrap';
           }
         }
       });
@@ -714,56 +745,98 @@
       loadSignals();
     }
 
+    function applyDashboardData(port, active) {
+      if (!port) return;
+      active = active || [];
+
+      // Desktop sidebar stats
+      const totalCapEl = document.getElementById('stat-total-capital');
+      if (totalCapEl) totalCapEl.textContent = `$${port.total_capital.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+
+      const cashAvailEl = document.getElementById('stat-cash-available');
+      if (cashAvailEl) cashAvailEl.textContent = `$${port.cash_available.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+
+      const depCapEl = document.getElementById('stat-deployed-capital');
+      if (depCapEl) depCapEl.textContent = `$${port.deployed_capital.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+
+      // Mobile cash available
+      const mobCashEl = document.getElementById('mobile-stat-cash-available');
+      if (mobCashEl) mobCashEl.textContent = `$${port.cash_available.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+
+      const unPnl = port.unrealized_pnl || 0;
+      const unPnlPct = port.unrealized_pnl_pct || 0;
+      const pnlStr = `${unPnl >= 0 ? '+' : ''}$${unPnl.toFixed(2)} (${unPnlPct >= 0 ? '+' : ''}${unPnlPct.toFixed(1)}%)`;
+
+      const pnlAsideEl = document.getElementById('stat-unrealized-pnl');
+      if (pnlAsideEl) {
+        pnlAsideEl.textContent = pnlStr;
+        pnlAsideEl.className = `text-xs font-bold mono ${unPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      }
+
+      const pnlHeadEl = document.getElementById('stat-unrealized-pnl-header');
+      if (pnlHeadEl) {
+        pnlHeadEl.textContent = `${unPnl >= 0 ? '+' : ''}$${unPnl.toFixed(2)}`;
+        pnlHeadEl.className = `font-bold mono ${unPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      }
+
+      const realAsideEl = document.getElementById('stat-realized-pnl-aside');
+      if (realAsideEl) {
+        realAsideEl.textContent = `${port.realized_pnl >= 0 ? '+' : ''}$${port.realized_pnl.toFixed(2)}`;
+        realAsideEl.className = `text-xs font-bold mono ${port.realized_pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      }
+
+      const winRateAsideEl = document.getElementById('stat-win-rate-aside');
+      if (winRateAsideEl) winRateAsideEl.textContent = `${port.win_rate.toFixed(1)}%`;
+
+      const activeAsideEl = document.getElementById('stat-active-count-aside');
+      if (activeAsideEl) activeAsideEl.textContent = active.length;
+
+      const navActiveEl = document.getElementById('nav-active-count');
+      if (navActiveEl) navActiveEl.textContent = active.length;
+
+      const mobActiveEl = document.getElementById('mobile-nav-active-count');
+      if (mobActiveEl) mobActiveEl.textContent = active.length;
+
+      // Dashboard View KPI Cards
+      const cardActiveCount = document.getElementById('stat-active-count');
+      if (cardActiveCount) cardActiveCount.textContent = active.length;
+
+      const cardFloatEl = document.getElementById('stat-card-floating-pnl');
+      if (cardFloatEl) {
+        cardFloatEl.textContent = `${unPnl >= 0 ? '+' : ''}$${unPnl.toFixed(2)}`;
+        cardFloatEl.className = `text-2xl font-extrabold mono mt-1 ${unPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      }
+
+      const realEl = document.getElementById('stat-realized-pnl');
+      if (realEl) {
+        realEl.textContent = `${port.realized_pnl >= 0 ? '+' : ''}$${port.realized_pnl.toFixed(2)}`;
+        realEl.className = `text-2xl font-extrabold mono mt-1 ${port.realized_pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      }
+
+      const winRateEl = document.getElementById('stat-win-rate');
+      if (winRateEl) winRateEl.textContent = `${port.win_rate.toFixed(1)}%`;
+
+      const activeBadgeEl = document.getElementById('active-badge');
+      if (activeBadgeEl) activeBadgeEl.textContent = `${active.length} Open`;
+
+      renderActiveTrades(active);
+    }
+
     async function loadDashboard(showSpinner = true) {
+      if (cachedPortfolio && cachedActiveTrades) {
+        applyDashboardData(cachedPortfolio, cachedActiveTrades);
+      }
       try {
         const [portRes, tradesRes] = await Promise.all([
           fetch('/api/portfolio'),
           fetch('/api/trades/active')
         ]);
+        if (!portRes.ok || !tradesRes.ok) throw new Error('Failed to fetch dashboard data');
         const port = await portRes.json();
         const active = await tradesRes.json();
         cachedPortfolio = port;
         cachedActiveTrades = active;
-
-        // Aside and header stats
-        document.getElementById('stat-total-capital').textContent = `$${port.total_capital.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-        document.getElementById('stat-cash-available').textContent = `$${port.cash_available.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-        document.getElementById('stat-deployed-capital').textContent = `$${port.deployed_capital.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-
-        const unPnl = port.unrealized_pnl || 0;
-        const unPnlPct = port.unrealized_pnl_pct || 0;
-        const pnlStr = `${unPnl >= 0 ? '+' : ''}$${unPnl.toFixed(2)} (${unPnlPct >= 0 ? '+' : ''}${unPnlPct.toFixed(1)}%)`;
-        
-        const pnlAsideEl = document.getElementById('stat-unrealized-pnl');
-        pnlAsideEl.textContent = pnlStr;
-        pnlAsideEl.className = `text-xs font-bold mono ${unPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
-
-        const pnlHeadEl = document.getElementById('stat-unrealized-pnl-header');
-        pnlHeadEl.textContent = `${unPnl >= 0 ? '+' : ''}$${unPnl.toFixed(2)}`;
-        pnlHeadEl.className = `font-bold mono ${unPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
-
-        document.getElementById('stat-realized-pnl-aside').textContent = `${port.realized_pnl >= 0 ? '+' : ''}$${port.realized_pnl.toFixed(2)}`;
-        document.getElementById('stat-realized-pnl-aside').className = `text-xs font-bold mono ${port.realized_pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
-
-        document.getElementById('stat-win-rate-aside').textContent = `${port.win_rate.toFixed(1)}%`;
-        document.getElementById('stat-active-count-aside').textContent = active.length;
-        document.getElementById('nav-active-count').textContent = active.length;
-
-        // KPI Cards
-        document.getElementById('stat-active-count').textContent = active.length;
-        
-        const cardFloatEl = document.getElementById('stat-card-floating-pnl');
-        cardFloatEl.textContent = `${unPnl >= 0 ? '+' : ''}$${unPnl.toFixed(2)}`;
-        cardFloatEl.className = `text-2xl font-extrabold mono mt-1 ${unPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
-
-        const realEl = document.getElementById('stat-realized-pnl');
-        realEl.textContent = `${port.realized_pnl >= 0 ? '+' : ''}$${port.realized_pnl.toFixed(2)}`;
-        realEl.className = `text-2xl font-extrabold mono mt-1 ${port.realized_pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
-
-        document.getElementById('stat-win-rate').textContent = `${port.win_rate.toFixed(1)}%`;
-        document.getElementById('active-badge').textContent = `${active.length} Open`;
-
-        renderActiveTrades(active);
+        applyDashboardData(port, active);
       } catch (err) {
         console.error('Failed to load dashboard:', err);
       }
@@ -849,46 +922,70 @@
       }).join('');
     }
 
+    function renderSignalsFeed(grouped) {
+      const feed = document.getElementById('signals-feed');
+      if (!feed) return;
+      const dates = Object.keys(grouped || {});
+
+      if (dates.length === 0) {
+        feed.innerHTML = `
+          <div class="text-center py-14 text-slate-500 glass-card rounded-xl">
+            <div class="text-3xl mb-2">📡</div>
+            <div class="text-sm font-medium text-slate-400">No signals recorded yet</div>
+            <div class="text-xs text-slate-600 mt-1">Click "Run Scanners" to scan the market right now!</div>
+          </div>
+        `;
+        return;
+      }
+
+      feed.innerHTML = dates.map(dateStr => {
+        const list = grouped[dateStr];
+        return `
+          <div class="space-y-4">
+            <div class="flex items-center gap-3">
+              <span class="px-3.5 py-1 rounded-xl bg-card border border-border text-xs font-bold mono text-cyan-400 flex items-center gap-1.5 shadow">
+                📅 ${dateStr}
+              </span>
+              <span class="text-xs text-slate-400 font-medium">${list.length} setup(s) generated</span>
+              <div class="flex-1 h-px bg-border"></div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              ${list.map(s => renderSignalCard(s)).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
     async function loadSignals() {
       const feed = document.getElementById('signals-feed');
-      const url = currentSignalFilter ? `/api/signals?system=${currentSignalFilter}` : '/api/signals';
+      const cacheKey = currentSignalFilter || 'all';
 
+      // 1. Instant render if cached (0ms latency, zero disappearing setups)
+      if (cachedSignalsData[cacheKey]) {
+        renderSignalsFeed(cachedSignalsData[cacheKey]);
+      }
+
+      // 2. Fetch fresh in background
+      const url = currentSignalFilter ? `/api/signals?system=${currentSignalFilter}` : '/api/signals';
       try {
         const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const grouped = await res.json();
-        const dates = Object.keys(grouped);
-
-        if (dates.length === 0) {
-          feed.innerHTML = `
-            <div class="text-center py-14 text-slate-500 glass-card rounded-xl">
-              <div class="text-3xl mb-2">📡</div>
-              <div class="text-sm font-medium text-slate-400">No signals recorded yet</div>
-              <div class="text-xs text-slate-600 mt-1">Click "Run Dual Scanners" in the left sidebar to scan the market right now!</div>
-            </div>
-          `;
-          return;
-        }
-
-        feed.innerHTML = dates.map(dateStr => {
-          const list = grouped[dateStr];
-          return `
-            <div class="space-y-4">
-              <div class="flex items-center gap-3">
-                <span class="px-3.5 py-1 rounded-xl bg-card border border-border text-xs font-bold mono text-cyan-400 flex items-center gap-1.5 shadow">
-                  📅 ${dateStr}
-                </span>
-                <span class="text-xs text-slate-400 font-medium">${list.length} setup(s) generated</span>
-                <div class="flex-1 h-px bg-border"></div>
-              </div>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                ${list.map(s => renderSignalCard(s)).join('')}
-              </div>
-            </div>
-          `;
-        }).join('');
+        cachedSignalsData[cacheKey] = grouped;
+        renderSignalsFeed(grouped);
       } catch (err) {
         console.error('Failed to load signals:', err);
+        if (!cachedSignalsData[cacheKey] && feed) {
+          feed.innerHTML = `
+            <div class="text-center py-14 text-slate-500 glass-card rounded-xl">
+              <div class="text-3xl mb-2">⚠️</div>
+              <div class="text-sm font-medium text-slate-400">Unable to load setups</div>
+              <div class="text-xs text-slate-600 mt-1">Please check connection or click Run Scanners</div>
+            </div>
+          `;
+        }
       }
     }
 
@@ -962,34 +1059,46 @@
       `;
     }
 
-    async function loadForecast() {
-      try {
-        const res = await fetch('/api/analytics');
-        const data = await res.json();
-        const sum = data.summary || {};
-        const fc = data.forecast || {};
+    function renderForecastFeed(data) {
+      if (!data) return;
+      const sum = data.summary || {};
+      const fc = data.forecast || {};
 
-        const sysSign = (sum.system_expected_pnl || 0) >= 0 ? '+' : '';
-        document.getElementById('forecast-sys-pnl').textContent = `${sysSign}$${(sum.system_expected_pnl || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-        document.getElementById('forecast-sys-ret').textContent = `${sysSign}${(sum.system_expected_return_pct || 0).toFixed(1)}%`;
-        document.getElementById('forecast-sys-signals').textContent = sum.system_total_signals || 0;
-        document.getElementById('forecast-sys-wr').textContent = `${(sum.system_win_rate || 0).toFixed(1)}%`;
+      const sysSign = (sum.system_expected_pnl || 0) >= 0 ? '+' : '';
+      const sysPnlEl = document.getElementById('forecast-sys-pnl');
+      if (sysPnlEl) sysPnlEl.textContent = `${sysSign}$${(sum.system_expected_pnl || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+      const sysRetEl = document.getElementById('forecast-sys-ret');
+      if (sysRetEl) sysRetEl.textContent = `${sysSign}${(sum.system_expected_return_pct || 0).toFixed(1)}%`;
+      const sysSigEl = document.getElementById('forecast-sys-signals');
+      if (sysSigEl) sysSigEl.textContent = sum.system_total_signals || 0;
+      const sysWrEl = document.getElementById('forecast-sys-wr');
+      if (sysWrEl) sysWrEl.textContent = `${(sum.system_win_rate || 0).toFixed(1)}%`;
 
-        const actSign = (sum.actual_total_pnl || 0) >= 0 ? '+' : '';
-        document.getElementById('forecast-act-pnl').textContent = `${actSign}$${(sum.actual_total_pnl || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-        document.getElementById('forecast-act-ret').textContent = `${actSign}${(sum.actual_return_pct || 0).toFixed(1)}%`;
-        document.getElementById('forecast-act-trades').textContent = sum.actual_trades_count || 0;
-        document.getElementById('forecast-act-wr').textContent = `${(sum.actual_win_rate || 0).toFixed(1)}%`;
+      const actSign = (sum.actual_total_pnl || 0) >= 0 ? '+' : '';
+      const actPnlEl = document.getElementById('forecast-act-pnl');
+      if (actPnlEl) actPnlEl.textContent = `${actSign}$${(sum.actual_total_pnl || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+      const actRetEl = document.getElementById('forecast-act-ret');
+      if (actRetEl) actRetEl.textContent = `${actSign}${(sum.actual_return_pct || 0).toFixed(1)}%`;
+      const actTrEl = document.getElementById('forecast-act-trades');
+      if (actTrEl) actTrEl.textContent = sum.actual_trades_count || 0;
+      const actWrEl = document.getElementById('forecast-act-wr');
+      if (actWrEl) actWrEl.textContent = `${(sum.actual_win_rate || 0).toFixed(1)}%`;
 
-        const capEff = sum.capture_efficiency_pct || 0;
-        document.getElementById('forecast-capture').textContent = `${capEff.toFixed(1)}%`;
-        document.getElementById('forecast-capture-bar').style.width = `${Math.min(100, Math.max(0, capEff))}%`;
+      const capEff = sum.capture_efficiency_pct || 0;
+      const capEl = document.getElementById('forecast-capture');
+      if (capEl) capEl.textContent = `${capEff.toFixed(1)}%`;
+      const capBarEl = document.getElementById('forecast-capture-bar');
+      if (capBarEl) capBarEl.style.width = `${Math.min(100, Math.max(0, capEff))}%`;
 
-        document.getElementById('proj-30d').textContent = `+$${(fc.forecast_30d_pnl || 0).toLocaleString('en-US', {minimumFractionDigits: 0})}`;
-        document.getElementById('proj-90d').textContent = `+$${(fc.forecast_90d_pnl || 0).toLocaleString('en-US', {minimumFractionDigits: 0})}`;
-        document.getElementById('proj-1yr').textContent = `+$${(fc.forecast_1yr_pnl || 0).toLocaleString('en-US', {minimumFractionDigits: 0})}`;
+      const p30El = document.getElementById('proj-30d');
+      if (p30El) p30El.textContent = `+$${(fc.forecast_30d_pnl || 0).toLocaleString('en-US', {minimumFractionDigits: 0})}`;
+      const p90El = document.getElementById('proj-90d');
+      if (p90El) p90El.textContent = `+$${(fc.forecast_90d_pnl || 0).toLocaleString('en-US', {minimumFractionDigits: 0})}`;
+      const p1yEl = document.getElementById('proj-1yr');
+      if (p1yEl) p1yEl.textContent = `+$${(fc.forecast_1yr_pnl || 0).toLocaleString('en-US', {minimumFractionDigits: 0})}`;
 
-        const wTbody = document.getElementById('weekly-breakdown-tbody');
+      const wTbody = document.getElementById('weekly-breakdown-tbody');
+      if (wTbody) {
         if (!data.weekly || data.weekly.length === 0) {
           wTbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-500">No weekly records available yet</td></tr>`;
         } else {
@@ -1009,8 +1118,10 @@
             `;
           }).join('');
         }
+      }
 
-        const mTbody = document.getElementById('monthly-breakdown-tbody');
+      const mTbody = document.getElementById('monthly-breakdown-tbody');
+      if (mTbody) {
         if (!data.monthly || data.monthly.length === 0) {
           mTbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-500">No monthly records available yet</td></tr>`;
         } else {
@@ -1030,61 +1141,82 @@
             `;
           }).join('');
         }
+      }
+    }
 
+    async function loadForecast() {
+      if (cachedForecastData) {
+        renderForecastFeed(cachedForecastData);
+      }
+      try {
+        const res = await fetch('/api/analytics');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        cachedForecastData = data;
+        renderForecastFeed(data);
       } catch (err) {
         console.error('Failed to load forecast analytics:', err);
       }
     }
 
-    async function loadHistory() {
+    function renderHistoryFeed(closed) {
       const tbody = document.getElementById('closed-trades-tbody');
+      if (!tbody) return;
+      if (!closed || closed.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="text-center py-12 text-slate-500">
+              <div class="text-sm font-medium text-slate-400">No closed trades recorded yet</div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = closed.map(t => {
+        const isWin = (t.pnl_amount || 0) >= 0;
+        const pnlColor = isWin ? 'text-emerald-400' : 'text-rose-400';
+        const pnlSign = isWin ? '+' : '';
+
+        return `
+          <tr class="hover:bg-surface/60 transition-colors">
+            <td class="py-4 px-6">
+              <span class="font-bold text-white mono text-base">${t.ticker}</span>
+              <span class="text-[10px] text-slate-500 ml-2 uppercase mono">${t.system}</span>
+            </td>
+            <td class="py-4 px-4 mono text-xs">
+              <div class="text-white">$${t.entry_price.toFixed(2)}</div>
+              <div class="text-slate-500 text-[11px]">${t.entry_date}</div>
+            </td>
+            <td class="py-4 px-4 mono text-xs">
+              <div class="text-white">$${t.exit_price.toFixed(2)}</div>
+              <div class="text-slate-500 text-[11px]">${t.exit_date}</div>
+            </td>
+            <td class="py-4 px-4 text-xs font-semibold text-slate-300">
+              ${t.exit_reason || 'Manual Exit'}
+            </td>
+            <td class="py-4 px-4 mono text-xs text-slate-400">
+              ${t.shares}
+            </td>
+            <td class="py-4 px-6 text-right mono">
+              <div class="${pnlColor} font-bold text-base">${pnlSign}$${t.pnl_amount ? t.pnl_amount.toFixed(2) : '0.00'}</div>
+              <div class="${pnlColor} text-xs">${pnlSign}${t.pnl_pct ? t.pnl_pct.toFixed(2) : '0.0'}%</div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function loadHistory() {
+      if (cachedHistoryData) {
+        renderHistoryFeed(cachedHistoryData);
+      }
       try {
         const res = await fetch('/api/trades/closed');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const closed = await res.json();
-
-        if (closed.length === 0) {
-          tbody.innerHTML = `
-            <tr>
-              <td colspan="6" class="text-center py-12 text-slate-500">
-                <div class="text-sm font-medium text-slate-400">No closed trades recorded yet</div>
-              </td>
-            </tr>
-          `;
-          return;
-        }
-
-        tbody.innerHTML = closed.map(t => {
-          const isWin = (t.pnl_amount || 0) >= 0;
-          const pnlColor = isWin ? 'text-emerald-400' : 'text-rose-400';
-          const pnlSign = isWin ? '+' : '';
-
-          return `
-            <tr class="hover:bg-surface/60 transition-colors">
-              <td class="py-4 px-6">
-                <span class="font-bold text-white mono text-base">${t.ticker}</span>
-                <span class="text-[10px] text-slate-500 ml-2 uppercase mono">${t.system}</span>
-              </td>
-              <td class="py-4 px-4 mono text-xs">
-                <div class="text-white">$${t.entry_price.toFixed(2)}</div>
-                <div class="text-slate-500 text-[11px]">${t.entry_date}</div>
-              </td>
-              <td class="py-4 px-4 mono text-xs">
-                <div class="text-white">$${t.exit_price.toFixed(2)}</div>
-                <div class="text-slate-500 text-[11px]">${t.exit_date}</div>
-              </td>
-              <td class="py-4 px-4 text-xs font-semibold text-slate-300">
-                ${t.exit_reason || 'Manual Exit'}
-              </td>
-              <td class="py-4 px-4 mono text-xs text-slate-400">
-                ${t.shares}
-              </td>
-              <td class="py-4 px-6 text-right mono">
-                <div class="${pnlColor} font-bold text-base">${pnlSign}$${t.pnl_amount ? t.pnl_amount.toFixed(2) : '0.00'}</div>
-                <div class="${pnlColor} text-xs">${pnlSign}${t.pnl_pct ? t.pnl_pct.toFixed(2) : '0.0'}%</div>
-              </td>
-            </tr>
-          `;
-        }).join('');
+        cachedHistoryData = closed;
+        renderHistoryFeed(closed);
       } catch (err) {
         console.error('Failed to load history:', err);
       }
@@ -1222,9 +1354,17 @@
       const text = document.getElementById('scan-btn-text');
       const icon = document.getElementById('scan-icon');
 
-      btn.disabled = true;
-      text.textContent = 'Scanning...';
-      icon.classList.add('animate-spin');
+      const mobBtn = document.getElementById('mobile-scan-btn');
+      const mobText = document.getElementById('mobile-scan-btn-text');
+      const mobIcon = document.getElementById('mobile-scan-icon');
+
+      if (btn) btn.disabled = true;
+      if (text) text.textContent = 'Scanning...';
+      if (icon) icon.classList.add('animate-spin');
+
+      if (mobBtn) mobBtn.disabled = true;
+      if (mobText) mobText.textContent = 'Scanning...';
+      if (mobIcon) mobIcon.classList.add('animate-spin');
 
       try {
         const res = await fetch('/api/scan', {
@@ -1234,6 +1374,13 @@
         });
         const data = await res.json();
         
+        // Invalidate cache so fresh scan results are immediately shown
+        cachedSignalsData = {};
+        cachedForecastData = null;
+        cachedHistoryData = null;
+        cachedPortfolio = null;
+        cachedActiveTrades = null;
+
         await loadDashboard();
         if (currentTab === 'signals') await loadSignals();
         if (currentTab === 'forecast') await loadForecast();
@@ -1243,9 +1390,13 @@
         console.error('Scanner error:', err);
         alert('Scanner execution encountered an issue: ' + err);
       } finally {
-        btn.disabled = false;
-        text.textContent = 'Run Dual Scanners';
-        icon.classList.remove('animate-spin');
+        if (btn) btn.disabled = false;
+        if (text) text.textContent = 'Run Dual Scanners';
+        if (icon) icon.classList.remove('animate-spin');
+
+        if (mobBtn) mobBtn.disabled = false;
+        if (mobText) mobText.textContent = 'Run Scanners';
+        if (mobIcon) mobIcon.classList.remove('animate-spin');
       }
     }
   </script>
