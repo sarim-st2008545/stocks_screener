@@ -21,16 +21,19 @@ screens:
 
 # Portfolio concentration is measured by segment as well as by ticker: NVDA,
 # AMD and TSM are one bet on AI silicon demand wearing three names.
+# Per-segment benchmarks are used for relative strength calculations in the swing trading engine.
 segments:
 
   ai_accelerators:
     label: AI accelerators
+    benchmark: SMH
     members:
       - {ticker: NVDA, note: "Dominant data-center GPU share plus CUDA software moat"}
       - {ticker: AMD,  note: "#2 merchant GPU (MI300/MI400); also a server CPU play"}
 
   cpu_general_silicon:
     label: CPU / general silicon
+    benchmark: SMH
     members:
       - {ticker: ARM,  note: "Profitable IP-royalty model behind Grace, Graviton, custom hyperscaler CPUs"}
       - {ticker: INTC, note: "x86 incumbent plus US-backed foundry bet (18A node)",
@@ -38,6 +41,7 @@ segments:
 
   networking:
     label: Networking silicon
+    benchmark: SMH
     members:
       - {ticker: AVGO, note: "~70% share of custom AI ASIC co-design (Google TPU, Meta MTIA)"}
       - {ticker: MRVL, note: "#2 custom ASIC partner (AWS Trainium, Microsoft Maia)"}
@@ -50,6 +54,7 @@ segments:
 
   memory_storage:
     label: Memory & storage
+    benchmark: SMH
     members:
       - {ticker: MU,  note: "HBM sold out through 2027; exited consumer to focus on AI/enterprise"}
       - {ticker: WDC, note: "NAND/HDD capacity for AI data storage tiers"}
@@ -60,6 +65,7 @@ segments:
 
   foundry_equipment:
     label: Foundry & fab equipment
+    benchmark: SMH
     members:
       - {ticker: TSM,  note: "Sole advanced-node foundry for NVDA/AMD/AAPL/AVGO"}
       - {ticker: ASML, note: "Sole EUV lithography supplier"}
@@ -73,6 +79,7 @@ segments:
 
   servers_integrators:
     label: Servers & system integrators
+    benchmark: SPY
     members:
       - {ticker: DELL, note: "Large AI server backlog; thin AI-server margins"}
       - {ticker: HPE,  note: "AI plus networking growth post-Juniper"}
@@ -82,6 +89,7 @@ segments:
 
   hyperscalers:
     label: Hyperscalers
+    benchmark: QQQ
     members:
       - {ticker: MSFT,  note: "Azure AI capex; the demand engine"}
       - {ticker: GOOGL, note: "TPU custom silicon plus Google Cloud"}
@@ -92,6 +100,7 @@ segments:
 
   datacenter_power:
     label: Data-center power & electrical
+    benchmark: XLU
     members:
       - {ticker: VRT, note: "NVIDIA co-development partner on power/thermal architecture"}
       - {ticker: ETN, note: "Electrical equipment; backlog driven by data-center demand"}
@@ -104,6 +113,7 @@ segments:
 
   ai_software:
     label: AI software & analytics
+    benchmark: QQQ
     members:
       - {ticker: PLTR, note: "Government plus commercial AI platform; genuinely profitable",
          stability_flag: "Valuation is the risk, not the business"}

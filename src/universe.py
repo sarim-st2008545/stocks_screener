@@ -69,6 +69,7 @@ class Constituent:
     ticker: str
     segment: str
     segment_label: str
+    benchmark: str = "SMH"
     note: str = ""
     stability_flag: str | None = None
     cyclical: bool = False
@@ -162,17 +163,32 @@ def candidates() -> list[Constituent]:
     """The curated candidate list from config, with annotations attached."""
     out: list[Constituent] = []
     for segment, spec in config.get("universe.segments").items():
+        segment_bench = spec.get("benchmark", "SMH")
         for member in spec["members"]:
             out.append(
                 Constituent(
                     ticker=member["ticker"].upper(),
                     segment=segment,
                     segment_label=spec.get("label", segment),
+                    benchmark=segment_bench,
                     note=member.get("note", ""),
                     stability_flag=member.get("stability_flag"),
                     cyclical=bool(spec.get("cyclical", False)),
                 )
             )
+    return out
+
+
+def ticker_benchmarks() -> dict[str, str]:
+    """Mapping of ticker symbol to its segment benchmark ETF (e.g. NVDA -> SMH, MSFT -> QQQ)."""
+    return {c.ticker: c.benchmark for c in candidates()}
+
+
+def segment_benchmarks() -> dict[str, str]:
+    """Mapping of segment key to benchmark ETF."""
+    out: dict[str, str] = {}
+    for segment, spec in config.get("universe.segments").items():
+        out[segment] = spec.get("benchmark", "SMH")
     return out
 
 

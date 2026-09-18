@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aura Quant Terminal | Universe & Galaxy Systems</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            obsidian: '#05070B',
+            surface: '#0B0F17',
+            card: '#101623',
+            border: '#1B2436',
+            hoverBorder: '#28354F',
+            galaxy: '#00F0FF',
+            galaxyDark: '#0369A1',
+            universe: '#A855F7',
+            universeDark: '#6B21A8',
+            emeraldGlow: '#10B981',
+            roseGlow: '#F43F5E',
+          },
+          fontFamily: {
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+            sans: ['"Inter"', 'system-ui', '-apple-system', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+    
+    body {
+      background-color: #05070B;
+      color: #E2E8F0;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .glass-card {
+      background: linear-gradient(180deg, rgba(16, 22, 35, 0.85) 0%, rgba(11, 15, 23, 0.95) 100%);
+      border: 1px solid rgba(27, 36, 54, 0.85);
+      backdrop-filter: blur(12px);
+    }
+    .glass-card:hover {
+      border-color: rgba(40, 53, 79, 0.95);
+    }
+
+    .range-track {
+      background: linear-gradient(90deg, #F43F5E 0%, #F59E0B 50%, #10B981 100%);
+      height: 4px;
+      border-radius: 9999px;
+      position: relative;
+    }
+    .range-thumb {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      box-shadow: 0 0 8px rgba(0, 240, 255, 0.9);
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #05070B;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1B2436;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #2D3D5B;
+    }
+  </style>
+</head>
+<body class="h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-black overflow-hidden">
+
+  <!-- ================================================================= -->
+  <!-- TOP HEADER (Fixed at top, no vertical scrolling) -->
+  <!-- ================================================================= -->
+  <header class="border-b border-border bg-obsidian/95 backdrop-blur shrink-0 z-40 py-2.5 sm:py-3.5 shadow-xl">
+    <div class="w-full px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16 sm:h-18 gap-4">
+        
+        <!-- Left Brand & Status -->
+        <div class="flex items-center gap-3.5">
+          <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 p-0.5 shadow-lg shadow-cyan-500/20 flex items-center justify-center">
+            <div class="w-full h-full bg-obsidian rounded-[10px] flex items-center justify-center font-bold text-cyan-400 text-base mono">
+              ⚡
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-extrabold text-base tracking-wider text-white uppercase">Aura Quant</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/80 font-bold mono">v2.0 PRO</span>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-slate-400 mt-1">
+              <span class="flex items-center gap-1.5 font-medium">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>SYSTEM LIVE</span>
+              </span>
+              <span class="text-slate-600">•</span>
+              <span class="text-emerald-400 font-medium">☪️ Shariah Compliant (AAOIFI)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Center: Prominent Navigation Tabs (Signals is Main Dashboard) -->
+        <nav class="hidden md:flex items-center bg-card/90 p-1.5 rounded-2xl border border-border/90 shadow-inner">
+          <button id="tab-signals-btn" onclick="switchTab('signals')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-cyan-600 text-white shadow-md shadow-cyan-900/30 flex items-center gap-2 cursor-pointer">
+            <span>⚡ Setups Stream (Dashboard)</span>
+          </button>
+          <button id="tab-dashboard-btn" onclick="switchTab('dashboard')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-2 cursor-pointer">
+            <span>💼 My Active Trades</span>
+            <span id="nav-active-count" class="px-1.5 py-0.2 rounded-full bg-cyan-950 text-cyan-300 text-[10px] mono font-bold">1</span>
+          </button>
+          <button id="tab-forecast-btn" onclick="switchTab('forecast')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-2 cursor-pointer">
+            <span>📈 Forecast & Analytics</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+          </button>
+          <button id="tab-history-btn" onclick="switchTab('history')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-2 cursor-pointer">
+            <span>📜 Closed History</span>
+          </button>
+        </nav>
+
+        <!-- Right: Status Badge -->
+        <div class="flex items-center gap-3">
+          <div class="hidden lg:flex items-center gap-2.5 px-4 py-2 rounded-xl bg-card border border-border text-xs">
+            <span class="text-slate-400">Floating P&L:</span>
+            <span id="stat-unrealized-pnl-header" class="font-bold mono text-emerald-400">$0.00</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Navigation Bar -->
+  <div class="md:hidden bg-card border-b border-border px-4 py-2.5 flex items-center justify-between gap-1 overflow-x-auto shrink-0">
+    <button onclick="switchTab('signals')" class="text-xs px-3 py-1.5 rounded-lg text-white bg-cyan-600 font-semibold">Setups</button>
+    <button onclick="switchTab('dashboard')" class="text-xs px-3 py-1.5 rounded-lg text-slate-300 font-medium">My Trades</button>
+    <button onclick="switchTab('forecast')" class="text-xs px-3 py-1.5 rounded-lg text-slate-300 font-medium">Forecast</button>
+    <button onclick="switchTab('history')" class="text-xs px-3 py-1.5 rounded-lg text-slate-300 font-medium">History</button>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MAIN LAYOUT: FIXED LEFT SIDEBAR + SCROLLABLE CONTENT VIEWPORT -->
+  <!-- ================================================================= -->
+  <div class="flex-1 w-full flex flex-col md:flex-row overflow-hidden min-h-0">
+
+    <!-- FIXED LEFT SIDEBAR: Independent, non-scrolling, permanent anchor -->
+    <aside class="w-full md:w-64 lg:w-72 bg-surface/95 border-b md:border-b-0 md:border-r border-border p-4 sm:p-5 flex flex-col justify-between shrink-0 h-full overflow-y-auto space-y-6">
+      
+      <div class="space-y-6">
+        
+        <!-- Primary Action Center -->
+        <div class="space-y-2.5">
+          <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400 px-1">Action Center</div>
+          
+          <!-- Run Scanners Main Button -->
+          <button id="scan-btn" onclick="triggerScanner()" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-xs font-bold text-white flex items-center justify-center gap-2 transition-all shadow-lg shadow-cyan-900/40 cursor-pointer">
+            <svg id="scan-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <span id="scan-btn-text">Run Dual Scanners</span>
+          </button>
+          
+          <!-- Enter New Trade Button -->
+          <button onclick="openNewTradeModal()" class="w-full py-2.5 px-4 rounded-xl bg-card hover:bg-card/70 border border-border hover:border-slate-500 text-xs font-semibold text-white flex items-center justify-center gap-2 transition-all shadow cursor-pointer">
+            <span class="text-cyan-400 font-bold text-sm">+</span>
+            <span>Enter New Position</span>
+          </button>
+        </div>
+
+        <!-- Portfolio Capital Card -->
+        <div class="glass-card p-4 rounded-xl border border-border space-y-3.5">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Portfolio Capital</span>
+            <button onclick="openEditCapitalModal()" title="Edit total capital" class="text-slate-500 hover:text-cyan-400 transition-colors p-1 cursor-pointer">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+            </button>
+          </div>
+          <div>
+            <div class="text-[10px] text-slate-500">Total Account Value</div>
+            <div id="stat-total-capital" class="text-xl font-extrabold mono text-white mt-0.5">$1,000.00</div>
+          </div>
+          <div class="pt-2 border-t border-border/80 flex items-center justify-between">
+            <div>
+              <div class="text-[9px] text-slate-500 uppercase">Cash Available</div>
+              <div id="stat-cash-available" class="text-xs font-bold mono text-cyan-400 mt-0.5">$808.00</div>
+            </div>
+            <div class="text-right">
+              <div class="text-[9px] text-slate-500 uppercase">Deployed</div>
+              <div id="stat-deployed-capital" class="text-xs font-bold mono text-slate-300 mt-0.5">$192.00</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Performance Summary HUD -->
+        <div class="glass-card p-4 rounded-xl border border-border space-y-3">
+          <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Performance HUD</div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-400">Floating P&L:</span>
+            <span id="stat-unrealized-pnl" class="text-xs font-bold mono text-emerald-400">$0.00</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-400">Realized P&L:</span>
+            <span id="stat-realized-pnl-aside" class="text-xs font-bold mono text-slate-300">$0.00</span>
+          </div>
+          <div class="flex items-center justify-between pt-2 border-t border-border/80">
+            <span class="text-xs text-slate-400">Closed Win Rate:</span>
+            <span id="stat-win-rate-aside" class="text-xs font-bold mono text-slate-400">0.0%</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-400">Active Positions:</span>
+            <span id="stat-active-count-aside" class="text-xs font-bold mono text-cyan-400">1</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer Info -->
+      <div class="pt-4 border-t border-border/60 text-[10px] text-slate-500 space-y-1">
+        <div class="flex items-center justify-between">
+          <span>Universe Engine:</span>
+          <span class="mono text-purple-400 font-semibold">41 AI Tickers</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span>Galaxy Engine:</span>
+          <span class="mono text-cyan-400 font-semibold">21 Halal Tickers</span>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- RIGHT MAIN CONTENT VIEWPORT -->
+    <main class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+
+      <!-- ================================================================= -->
+      <!-- TAB 1: SIGNALS & SETUPS STREAM (DEFAULT MAIN DASHBOARD) -->
+      <!-- ================================================================= -->
+      <section id="view-signals" class="space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3 border-b border-border">
+          <div>
+            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Trading Setups & Signals Dashboard</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Every scanner setup is automatically preserved by date and tracked for profit/loss — even if not traded.</p>
+          </div>
+          
+          <!-- Two System Buttons (Galaxy & Universe) instead of dropdown -->
+          <div class="flex items-center gap-1.5 bg-card p-1 rounded-xl border border-border">
+            <button id="sig-filter-all-btn" onclick="setSignalFilter('')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-cyan-600 text-white shadow cursor-pointer">
+              All Setups
+            </button>
+            <button id="sig-filter-galaxy-btn" onclick="setSignalFilter('galaxy')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 cursor-pointer">
+              ⚡ Galaxy v2 (Halal Scalp)
+            </button>
+            <button id="sig-filter-universe-btn" onclick="setSignalFilter('universe')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 cursor-pointer">
+              🚀 Universe (AI Swing)
+            </button>
+          </div>
+        </div>
+
+        <!-- Signals Feed Container -->
+        <div id="signals-feed" class="space-y-8">
+          <!-- Rendered dynamically grouped by date -->
+        </div>
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- TAB 2: MY ACTIVE TRADES -->
+      <!-- ================================================================= -->
+      <section id="view-dashboard" class="hidden space-y-6">
+        
+        <!-- Key KPI Header Row -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="glass-card p-4 rounded-xl">
+            <div class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Active Positions</div>
+            <div id="stat-active-count" class="text-2xl font-extrabold mono text-white mt-1">1</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Currently open in portfolio</div>
+          </div>
+          <div class="glass-card p-4 rounded-xl">
+            <div class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Floating P&L</div>
+            <div id="stat-card-floating-pnl" class="text-2xl font-extrabold mono text-slate-300 mt-1">$0.00</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Unrealized profit across active trades</div>
+          </div>
+          <div class="glass-card p-4 rounded-xl">
+            <div class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Realized Net P&L</div>
+            <div id="stat-realized-pnl" class="text-2xl font-extrabold mono text-slate-300 mt-1">$0.00</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Banked gains from closed positions</div>
+          </div>
+          <div class="glass-card p-4 rounded-xl">
+            <div class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Closed Win Rate</div>
+            <div id="stat-win-rate" class="text-2xl font-extrabold mono text-slate-400 mt-1">0.0%</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Historical closed winning trades</div>
+          </div>
+        </div>
+
+        <!-- Active Portfolio Positions Table -->
+        <div class="glass-card rounded-xl overflow-hidden shadow-2xl">
+          <div class="px-6 py-4 border-b border-border flex items-center justify-between bg-card/40">
+            <div class="flex items-center gap-3">
+              <h2 class="text-xs font-bold text-white uppercase tracking-wider">My Active Trades</h2>
+              <span id="active-badge" class="px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/60 text-xs mono font-bold">1 Open</span>
+            </div>
+            <button onclick="loadDashboard()" class="text-xs text-slate-400 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <span>Refresh Prices</span>
+            </button>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-border/80 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-card/20">
+                  <th class="py-3 px-6">Ticker / Sleeve</th>
+                  <th class="py-3 px-4">Entry / Shares</th>
+                  <th class="py-3 px-4">Live Price</th>
+                  <th class="py-3 px-4">Stop / Target</th>
+                  <th class="py-3 px-4 w-44">Target Progress</th>
+                  <th class="py-3 px-4">Days Held</th>
+                  <th class="py-3 px-4">Floating P&L</th>
+                  <th class="py-3 px-6 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="active-trades-tbody" class="divide-y divide-border/60 text-sm">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- TAB 3: FORECAST & ANALYTICS -->
+      <!-- ================================================================= -->
+      <section id="view-forecast" class="hidden space-y-8">
+        
+        <!-- Top Title & Overview -->
+        <div>
+          <h2 class="text-sm font-bold text-white uppercase tracking-wider">System Analytics & Forward Forecast</h2>
+          <p class="text-xs text-slate-400 mt-0.5">Comparison between total theoretical system potential (all signals) vs your actual executed trades.</p>
+        </div>
+
+        <!-- Comparison Metrics Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          
+          <!-- System Theoretical Potential Card -->
+          <div class="glass-card p-5 rounded-xl border-l-4 border-cyan-500 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-cyan-400">System Potential (All Signals)</span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 font-mono">100% Setups</span>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span id="forecast-sys-pnl" class="text-3xl font-extrabold mono text-white">$0.00</span>
+              <span id="forecast-sys-ret" class="text-xs font-bold mono text-emerald-400">+0.0%</span>
+            </div>
+            <p class="text-xs text-slate-400">Theoretical net profit if every single signal was executed with standard sizing.</p>
+            <div class="pt-2 border-t border-border flex items-center justify-between text-xs mono">
+              <span class="text-slate-500">Signals Generated:</span>
+              <span id="forecast-sys-signals" class="font-bold text-white">0</span>
+            </div>
+            <div class="flex items-center justify-between text-xs mono">
+              <span class="text-slate-500">System Win Rate:</span>
+              <span id="forecast-sys-wr" class="font-bold text-emerald-400">0.0%</span>
+            </div>
+          </div>
+
+          <!-- Actual Trader Banked Card -->
+          <div class="glass-card p-5 rounded-xl border-l-4 border-emerald-500 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Trader Banked (Actual Trades)</span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 font-mono">Your Executions</span>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span id="forecast-act-pnl" class="text-3xl font-extrabold mono text-white">$0.00</span>
+              <span id="forecast-act-ret" class="text-xs font-bold mono text-slate-400">+0.0%</span>
+            </div>
+            <p class="text-xs text-slate-400">Realized + floating profit from positions you personally opened.</p>
+            <div class="pt-2 border-t border-border flex items-center justify-between text-xs mono">
+              <span class="text-slate-500">Trades Executed:</span>
+              <span id="forecast-act-trades" class="font-bold text-white">1</span>
+            </div>
+            <div class="flex items-center justify-between text-xs mono">
+              <span class="text-slate-500">Actual Win Rate:</span>
+              <span id="forecast-act-wr" class="font-bold text-slate-400">0.0%</span>
+            </div>
+          </div>
+
+          <!-- Capture Efficiency Card -->
+          <div class="glass-card p-5 rounded-xl border-l-4 border-purple-500 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-purple-400">Capture Efficiency</span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-purple-950 text-purple-300 font-mono">Alpha Conversion</span>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span id="forecast-capture" class="text-3xl font-extrabold mono text-purple-300">0.0%</span>
+            </div>
+            <p class="text-xs text-slate-400">Percentage of the quantitative system's available alpha captured into your bankroll.</p>
+            <div class="pt-2 border-t border-border">
+              <div class="w-full bg-surface h-2 rounded-full overflow-hidden border border-border">
+                <div id="forecast-capture-bar" class="bg-gradient-to-r from-purple-500 to-cyan-400 h-full transition-all" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Forward Projections Card -->
+        <div class="glass-card p-6 rounded-xl border border-border space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-xs font-bold text-white uppercase tracking-wider">Probabilistic Forward Projections</h3>
+              <p class="text-xs text-slate-400 mt-0.5">Mathematically modelled returns based on backtested edge (Galaxy PF 5.73, Universe PF 3.7+).</p>
+            </div>
+            <span class="text-xs px-2.5 py-1 rounded-lg bg-card border border-border text-cyan-400 mono font-semibold">Expected: ~6.5% / Mo</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+            <div class="bg-surface/80 p-4 rounded-xl border border-border">
+              <div class="text-[10px] text-slate-400 uppercase font-semibold">30-Day Forecast</div>
+              <div id="proj-30d" class="text-xl font-bold mono text-emerald-400 mt-1">+$65.00</div>
+              <div class="text-[10px] text-slate-500 mt-0.5">+6.5% on portfolio equity</div>
+            </div>
+            <div class="bg-surface/80 p-4 rounded-xl border border-border">
+              <div class="text-[10px] text-slate-400 uppercase font-semibold">90-Day Forecast</div>
+              <div id="proj-90d" class="text-xl font-bold mono text-emerald-400 mt-1">+$208.00</div>
+              <div class="text-[10px] text-slate-500 mt-0.5">+20.8% compounded growth</div>
+            </div>
+            <div class="bg-surface/80 p-4 rounded-xl border border-border">
+              <div class="text-[10px] text-slate-400 uppercase font-semibold">1-Year Compound Forecast</div>
+              <div id="proj-1yr" class="text-xl font-bold mono text-cyan-400 mt-1">+$1,129.00</div>
+              <div class="text-[10px] text-slate-500 mt-0.5">+112.9% compounded CAGR</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Weekly Performance Breakdown -->
+        <div class="glass-card rounded-xl overflow-hidden shadow-xl space-y-3">
+          <div class="px-6 py-4 border-b border-border bg-card/40 flex items-center justify-between">
+            <h3 class="text-xs font-bold text-white uppercase tracking-wider">Weekly Performance Breakdown</h3>
+            <span class="text-xs text-slate-500">System Expected vs. Trader Banked</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-border/80 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-card/20">
+                  <th class="py-3 px-6">Week</th>
+                  <th class="py-3 px-4">System Signals</th>
+                  <th class="py-3 px-4">System Win Rate</th>
+                  <th class="py-3 px-4">Expected System P&L</th>
+                  <th class="py-3 px-4">Actual Trades</th>
+                  <th class="py-3 px-4">Actual Banked P&L</th>
+                  <th class="py-3 px-6 text-right">Capture %</th>
+                </tr>
+              </thead>
+              <tbody id="weekly-breakdown-tbody" class="divide-y divide-border/60 text-xs">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Monthly Performance Breakdown -->
+        <div class="glass-card rounded-xl overflow-hidden shadow-xl space-y-3">
+          <div class="px-6 py-4 border-b border-border bg-card/40 flex items-center justify-between">
+            <h3 class="text-xs font-bold text-white uppercase tracking-wider">Monthly Performance Breakdown</h3>
+            <span class="text-xs text-slate-500">Historical Month-by-Month Log</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-border/80 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-card/20">
+                  <th class="py-3 px-6">Month</th>
+                  <th class="py-3 px-4">Total Setups</th>
+                  <th class="py-3 px-4">System Win Rate</th>
+                  <th class="py-3 px-4">System Expected Return</th>
+                  <th class="py-3 px-4">Actual Trades</th>
+                  <th class="py-3 px-4">Actual Realized P&L</th>
+                  <th class="py-3 px-6 text-right">Capture Ratio</th>
+                </tr>
+              </thead>
+              <tbody id="monthly-breakdown-tbody" class="divide-y divide-border/60 text-xs">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- TAB 4: CLOSED TRADES AUDIT LOG -->
+      <!-- ================================================================= -->
+      <section id="view-history" class="hidden space-y-6">
+        <div class="flex items-center justify-between pb-3 border-b border-border">
+          <div>
+            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Closed Trades Audit Log</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Historical record of all closed positions with verified outcomes.</p>
+          </div>
+        </div>
+
+        <div class="glass-card rounded-xl overflow-hidden shadow-xl">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-border/80 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-card/20">
+                  <th class="py-3 px-6">Ticker / Sleeve</th>
+                  <th class="py-3 px-4">Entry Date / Price</th>
+                  <th class="py-3 px-4">Exit Date / Price</th>
+                  <th class="py-3 px-4">Exit Reason</th>
+                  <th class="py-3 px-4">Shares</th>
+                  <th class="py-3 px-6 text-right">Realized Return</th>
+                </tr>
+              </thead>
+              <tbody id="closed-trades-tbody" class="divide-y divide-border/60 text-sm">
+                <tr>
+                  <td colspan="6" class="text-center py-12 text-slate-500">
+                    <div class="text-sm font-medium text-slate-400">No closed trades recorded yet</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: EDIT TOTAL PORTFOLIO CAPITAL -->
+  <!-- ================================================================= -->
+  <div id="modal-capital" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-border">
+      <div class="flex items-center justify-between border-b border-border pb-3">
+        <h3 class="text-sm font-bold text-white uppercase tracking-wider">Configure Portfolio Capital</h3>
+        <button onclick="closeEditCapitalModal()" class="text-slate-400 hover:text-white text-lg cursor-pointer">&times;</button>
+      </div>
+      <p class="text-xs text-slate-400">Set your bankroll. Cash allocations and position sizes adjust automatically.</p>
+      <div>
+        <label class="text-xs font-semibold text-slate-300 block mb-1">Total Equity ($ USD)</label>
+        <input id="input-capital" type="number" step="100" class="w-full bg-surface border border-border rounded-xl px-4 py-2.5 text-white mono font-bold focus:outline-none focus:border-cyan-500 text-lg">
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeEditCapitalModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white cursor-pointer">Cancel</button>
+        <button onclick="saveCapital()" class="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-xs font-bold text-white shadow cursor-pointer">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: ENTER NEW POSITION / TRADE -->
+  <!-- ================================================================= -->
+  <div id="modal-trade" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 border border-border">
+      <div class="flex items-center justify-between border-b border-border pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xs font-bold">+</div>
+          <h3 class="text-sm font-bold text-white uppercase tracking-wider">Enter New Position</h3>
+        </div>
+        <button onclick="closeNewTradeModal()" class="text-slate-400 hover:text-white text-lg cursor-pointer">&times;</button>
+      </div>
+
+      <input type="hidden" id="trade-signal-id" value="">
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs font-semibold text-slate-300 block mb-1">Ticker</label>
+          <input id="trade-ticker" type="text" placeholder="e.g. PATH" class="w-full uppercase bg-surface border border-border rounded-xl px-3 py-2 text-white mono font-bold focus:outline-none focus:border-cyan-500 text-sm">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-300 block mb-1">System Sleeve</label>
+          <select id="trade-system" class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500">
+            <option value="galaxy">Galaxy v2 (3-4 Day Halal)</option>
+            <option value="universe">Universe (AI Swing 2-5 Wk)</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-300 block mb-1">Entry Price ($)</label>
+          <input id="trade-price" type="number" step="0.01" placeholder="12.50" class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-white mono text-sm focus:outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-300 block mb-1">Shares</label>
+          <input id="trade-shares" type="number" step="1" value="1" class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-white mono text-sm focus:outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-rose-400 block mb-1">Stop Loss ($)</label>
+          <input id="trade-stop" type="number" step="0.01" placeholder="11.80" class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-rose-300 mono text-sm focus:outline-none focus:border-rose-500">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-emerald-400 block mb-1">Target Price ($)</label>
+          <input id="trade-target" type="number" step="0.01" placeholder="13.90" class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-emerald-300 mono text-sm focus:outline-none focus:border-emerald-500">
+        </div>
+      </div>
+
+      <div>
+        <label class="text-xs font-semibold text-slate-300 block mb-1">Notes</label>
+        <input id="trade-notes" type="text" placeholder="e.g. RSI-2 Capitulation entry at open" class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-slate-300 text-xs focus:outline-none focus:border-cyan-500">
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeNewTradeModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white cursor-pointer">Cancel</button>
+        <button onclick="submitNewTrade()" class="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-xs font-bold text-white shadow cursor-pointer">Log Active Position</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: CLOSE ACTIVE TRADE -->
+  <!-- ================================================================= -->
+  <div id="modal-close" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-border">
+      <div class="flex items-center justify-between border-b border-border pb-3">
+        <h3 class="text-sm font-bold text-white uppercase tracking-wider">Close Trade & Bank P&L</h3>
+        <button onclick="closeExitModal()" class="text-slate-400 hover:text-white text-lg cursor-pointer">&times;</button>
+      </div>
+
+      <input type="hidden" id="close-trade-id" value="">
+      <div id="close-trade-summary" class="text-xs text-slate-300 bg-surface p-3 rounded-xl border border-border mono space-y-1">
+      </div>
+
+      <div>
+        <label class="text-xs font-semibold text-slate-300 block mb-1">Exit Price ($)</label>
+        <input id="close-exit-price" type="number" step="0.01" class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-white mono font-bold focus:outline-none focus:border-cyan-500 text-sm">
+      </div>
+
+      <div>
+        <label class="text-xs font-semibold text-slate-300 block mb-1">Exit Reason</label>
+        <select id="close-exit-reason" class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500">
+          <option value="Target Hit">Target Hit (Mean Reversion Pop)</option>
+          <option value="Stop Loss Hit">Stop Loss Hit (Risk Floor)</option>
+          <option value="Time Limit Expired">Day 4 Limit Reached</option>
+          <option value="RSI Overbought">RSI > 70 Snapback</option>
+          <option value="Manual Exit">Manual Profit Take</option>
+        </select>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeExitModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white cursor-pointer">Cancel</button>
+        <button onclick="submitCloseTrade()" class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-bold text-white shadow cursor-pointer">Confirm Exit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    let currentTab = 'signals'; // Signals is the main dashboard landing page
+    let cachedPortfolio = {};
+    let cachedActiveTrades = [];
+    let currentSignalFilter = '';
+
+    window.addEventListener('DOMContentLoaded', () => {
+      switchTab('signals');
+      loadDashboard();
+      setInterval(() => {
+        if (currentTab === 'dashboard') loadDashboard(false);
+      }, 15000);
+    });
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.getElementById('view-signals').classList.toggle('hidden', tab !== 'signals');
+      document.getElementById('view-dashboard').classList.toggle('hidden', tab !== 'dashboard');
+      document.getElementById('view-forecast').classList.toggle('hidden', tab !== 'forecast');
+      document.getElementById('view-history').classList.toggle('hidden', tab !== 'history');
+
+      const tabs = ['signals', 'dashboard', 'forecast', 'history'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tab-${t}-btn`);
+        if (btn) {
+          if (t === tab) {
+            btn.className = 'px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-cyan-600 text-white shadow-md shadow-cyan-900/30 flex items-center gap-2 cursor-pointer';
+          } else {
+            btn.className = 'px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-2 cursor-pointer';
+          }
+        }
+      });
+
+      if (tab === 'signals') loadSignals();
+      if (tab === 'dashboard') loadDashboard();
+      if (tab === 'forecast') loadForecast();
+      if (tab === 'history') loadHistory();
+    }
+
+    function setSignalFilter(system) {
+      currentSignalFilter = system;
+      const allBtn = document.getElementById('sig-filter-all-btn');
+      const galBtn = document.getElementById('sig-filter-galaxy-btn');
+      const uniBtn = document.getElementById('sig-filter-universe-btn');
+
+      allBtn.className = system === '' 
+        ? 'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-cyan-600 text-white shadow cursor-pointer'
+        : 'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 cursor-pointer';
+
+      galBtn.className = system === 'galaxy'
+        ? 'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-cyan-600 text-white shadow cursor-pointer'
+        : 'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 cursor-pointer';
+
+      uniBtn.className = system === 'universe'
+        ? 'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-purple-600 text-white shadow cursor-pointer'
+        : 'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 cursor-pointer';
+
+      loadSignals();
+    }
+
+    async function loadDashboard(showSpinner = true) {
+      try {
+        const [portRes, tradesRes] = await Promise.all([
+          fetch('/api/portfolio'),
+          fetch('/api/trades/active')
+        ]);
+        const port = await portRes.json();
+        const active = await tradesRes.json();
+        cachedPortfolio = port;
+        cachedActiveTrades = active;
+
+        // Aside and header stats
+        document.getElementById('stat-total-capital').textContent = `$${port.total_capital.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+        document.getElementById('stat-cash-available').textContent = `$${port.cash_available.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+        document.getElementById('stat-deployed-capital').textContent = `$${port.deployed_capital.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+
+        const unPnl = port.unrealized_pnl || 0;
+        const unPnlPct = port.unrealized_pnl_pct || 0;
+        const pnlStr = `${unPnl >= 0 ? '+' : ''}$${unPnl.toFixed(2)} (${unPnlPct >= 0 ? '+' : ''}${unPnlPct.toFixed(1)}%)`;
+        
+        const pnlAsideEl = document.getElementById('stat-unrealized-pnl');
+        pnlAsideEl.textContent = pnlStr;
+        pnlAsideEl.className = `text-xs font-bold mono ${unPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+
+        const pnlHeadEl = document.getElementById('stat-unrealized-pnl-header');
+        pnlHeadEl.textContent = `${unPnl >= 0 ? '+' : ''}$${unPnl.toFixed(2)}`;
+        pnlHeadEl.className = `font-bold mono ${unPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+
+        document.getElementById('stat-realized-pnl-aside').textContent = `${port.realized_pnl >= 0 ? '+' : ''}$${port.realized_pnl.toFixed(2)}`;
+        document.getElementById('stat-realized-pnl-aside').className = `text-xs font-bold mono ${port.realized_pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+
+        document.getElementById('stat-win-rate-aside').textContent = `${port.win_rate.toFixed(1)}%`;
+        document.getElementById('stat-active-count-aside').textContent = active.length;
+        document.getElementById('nav-active-count').textContent = active.length;
+
+        // KPI Cards
+        document.getElementById('stat-active-count').textContent = active.length;
+        
+        const cardFloatEl = document.getElementById('stat-card-floating-pnl');
+        cardFloatEl.textContent = `${unPnl >= 0 ? '+' : ''}$${unPnl.toFixed(2)}`;
+        cardFloatEl.className = `text-2xl font-extrabold mono mt-1 ${unPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+
+        const realEl = document.getElementById('stat-realized-pnl');
+        realEl.textContent = `${port.realized_pnl >= 0 ? '+' : ''}$${port.realized_pnl.toFixed(2)}`;
+        realEl.className = `text-2xl font-extrabold mono mt-1 ${port.realized_pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+
+        document.getElementById('stat-win-rate').textContent = `${port.win_rate.toFixed(1)}%`;
+        document.getElementById('active-badge').textContent = `${active.length} Open`;
+
+        renderActiveTrades(active);
+      } catch (err) {
+        console.error('Failed to load dashboard:', err);
+      }
+    }
+
+    function renderActiveTrades(trades) {
+      const tbody = document.getElementById('active-trades-tbody');
+      if (!trades || trades.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="text-center py-14 text-slate-500">
+              <div class="text-3xl mb-2">🔭</div>
+              <div class="text-sm font-medium text-slate-400">No active positions open</div>
+              <div class="text-xs text-slate-600 mt-1">Click "Setups Stream" to enter today's scanner setups, or click "+ Enter New Position" in the sidebar</div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = trades.map(t => {
+        const isGalaxy = t.system === 'galaxy';
+        const sysBadge = isGalaxy 
+          ? '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-cyan-950 text-cyan-400 border border-cyan-800/80 mono">GALAXY v2</span>'
+          : '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-purple-950 text-purple-400 border border-purple-800/80 mono">UNIVERSE</span>';
+
+        const pnlColor = t.unrealized_pnl >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        const pnlSign = t.unrealized_pnl >= 0 ? '+' : '';
+
+        const days = t.days_held || 0;
+        const daysText = days === 1 ? '1 day' : `${days} days`;
+
+        return `
+          <tr class="hover:bg-surface/60 transition-colors">
+            <td class="py-4 px-6">
+              <div class="flex items-center gap-2">
+                <span class="font-extrabold text-white mono text-base">${t.ticker}</span>
+                ${sysBadge}
+              </div>
+              <div class="text-[11px] text-slate-500 mt-0.5 mono">Opened ${t.entry_date}</div>
+            </td>
+            <td class="py-4 px-4 mono text-xs">
+              <div class="text-white font-bold">$${t.entry_price.toFixed(2)}</div>
+              <div class="text-slate-500 text-[11px]">${t.shares} shares ($${t.cost_basis.toFixed(0)})</div>
+            </td>
+            <td class="py-4 px-4 mono text-xs">
+              <div class="text-white font-bold flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                <span>$${t.current_price.toFixed(2)}</span>
+              </div>
+              <div class="text-[10px] text-slate-500">Live Close</div>
+            </td>
+            <td class="py-4 px-4 mono text-xs">
+              <div class="text-emerald-400 font-medium">Target: $${t.target_price.toFixed(2)}</div>
+              <div class="text-rose-400 font-medium">Stop: $${t.stop_loss.toFixed(2)}</div>
+            </td>
+            <td class="py-4 px-4">
+              <div class="flex items-center justify-between text-[9px] mono text-slate-400 mb-1">
+                <span class="text-rose-400">-$${(t.entry_price - t.stop_loss).toFixed(2)}</span>
+                <span class="text-emerald-400">+$${(t.target_price - t.entry_price).toFixed(2)}</span>
+              </div>
+              <div class="range-track w-full">
+                <div class="range-thumb" style="left: ${t.progress_pct}%"></div>
+              </div>
+            </td>
+            <td class="py-4 px-4 mono">
+              <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-card border border-border text-xs font-semibold text-slate-200">
+                <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span>${daysText}</span>
+              </div>
+            </td>
+            <td class="py-4 px-4 mono">
+              <div class="${pnlColor} font-bold text-sm">${pnlSign}$${t.unrealized_pnl.toFixed(2)}</div>
+              <div class="${pnlColor} text-[11px]">${pnlSign}${t.unrealized_pnl_pct.toFixed(2)}%</div>
+            </td>
+            <td class="py-4 px-6 text-right">
+              <button onclick="openExitModal(${t.id})" class="px-3 py-1.5 rounded-lg bg-card hover:bg-rose-950/60 hover:text-rose-300 hover:border-rose-700/80 border border-border text-xs font-semibold text-slate-300 transition-all cursor-pointer">
+                Close
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function loadSignals() {
+      const feed = document.getElementById('signals-feed');
+      const url = currentSignalFilter ? `/api/signals?system=${currentSignalFilter}` : '/api/signals';
+
+      try {
+        const res = await fetch(url);
+        const grouped = await res.json();
+        const dates = Object.keys(grouped);
+
+        if (dates.length === 0) {
+          feed.innerHTML = `
+            <div class="text-center py-14 text-slate-500 glass-card rounded-xl">
+              <div class="text-3xl mb-2">📡</div>
+              <div class="text-sm font-medium text-slate-400">No signals recorded yet</div>
+              <div class="text-xs text-slate-600 mt-1">Click "Run Dual Scanners" in the left sidebar to scan the market right now!</div>
+            </div>
+          `;
+          return;
+        }
+
+        feed.innerHTML = dates.map(dateStr => {
+          const list = grouped[dateStr];
+          return `
+            <div class="space-y-4">
+              <div class="flex items-center gap-3">
+                <span class="px-3.5 py-1 rounded-xl bg-card border border-border text-xs font-bold mono text-cyan-400 flex items-center gap-1.5 shadow">
+                  📅 ${dateStr}
+                </span>
+                <span class="text-xs text-slate-400 font-medium">${list.length} setup(s) generated</span>
+                <div class="flex-1 h-px bg-border"></div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                ${list.map(s => renderSignalCard(s)).join('')}
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Failed to load signals:', err);
+      }
+    }
+
+    function renderSignalCard(s) {
+      const isGalaxy = s.system === 'galaxy';
+      const badge = isGalaxy 
+        ? '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-cyan-950 text-cyan-400 border border-cyan-800/80 mono">GALAXY v2</span>'
+        : '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-purple-950 text-purple-400 border border-purple-800/80 mono">UNIVERSE</span>';
+
+      let statusBadge = '<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">⏳ PENDING</span>';
+      if (s.status === 'HIT_TARGET' || s.status === 'WON') {
+        statusBadge = `<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800/80">🎯 TARGET HIT (+${(s.outcome_pnl_pct || s.target_pct).toFixed(1)}%)</span>`;
+      } else if (s.status === 'HIT_STOP' || s.status === 'LOST') {
+        statusBadge = `<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-950 text-rose-400 border border-rose-800/80">🛑 STOPPED (-${Math.abs(s.outcome_pnl_pct || s.stop_pct).toFixed(1)}%)</span>`;
+      } else if (s.status === 'IN_PLAY' || s.status === 'ACTIVE') {
+        const liveSign = (s.outcome_pnl_pct || 0) >= 0 ? '+' : '';
+        statusBadge = `<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-blue-950 text-blue-300 border border-blue-800/80">🟢 IN PLAY (${liveSign}${(s.outcome_pnl_pct || 0).toFixed(1)}%)</span>`;
+      } else if (s.status === 'EXPIRED') {
+        statusBadge = '<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-950 text-amber-400 border border-amber-800/80">🟡 TIME LIMIT</span>';
+      }
+
+      const pnlDollar = s.hypothetical_pnl_dollar || 0;
+      const pnlDollarSign = pnlDollar >= 0 ? '+' : '';
+      const pnlDollarColor = pnlDollar >= 0 ? 'text-emerald-400' : 'text-rose-400';
+
+      return `
+        <div class="glass-card rounded-xl p-5 hover:border-slate-600 transition-all flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xl font-extrabold mono text-white">${s.ticker}</span>
+                  ${badge}
+                </div>
+                <div class="text-xs text-slate-400 font-medium truncate mt-0.5">${s.name || s.ticker}</div>
+              </div>
+              <div>${statusBadge}</div>
+            </div>
+
+            <div class="mt-3 py-2 px-3 bg-surface rounded-xl border border-border">
+              <div class="text-[11px] text-slate-400">Trigger: <span class="text-slate-200 font-semibold">${s.signal_type}</span></div>
+              <div class="text-[11px] text-slate-400 mt-0.5">Sector: <span class="text-slate-300 font-medium">${s.segment}</span></div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 mt-3 pt-2 border-t border-border/60 mono text-xs">
+              <div>
+                <div class="text-[9px] text-slate-500 uppercase">Trigger</div>
+                <div class="text-white font-bold">$${s.price.toFixed(2)}</div>
+              </div>
+              <div>
+                <div class="text-[9px] text-emerald-500 uppercase">Target</div>
+                <div class="text-emerald-400 font-bold">$${s.target_price.toFixed(2)} (+${s.target_pct.toFixed(1)}%)</div>
+              </div>
+              <div>
+                <div class="text-[9px] text-rose-500 uppercase">Stop</div>
+                <div class="text-rose-400 font-bold">$${s.stop_loss.toFixed(2)} (-${s.stop_pct.toFixed(1)}%)</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-border/60 flex items-center justify-between">
+            <div>
+              <div class="text-[9px] text-slate-500 uppercase mono">System Return</div>
+              <div class="${pnlDollarColor} font-bold text-xs mono">${pnlDollarSign}$${pnlDollar.toFixed(2)}</div>
+            </div>
+            <button onclick="tradeSignal(${JSON.stringify(s).replace(/"/g, '&quot;')})" class="px-3.5 py-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600 text-cyan-400 hover:text-white border border-cyan-700/60 text-xs font-bold transition-all flex items-center gap-1 shadow cursor-pointer">
+              <span>⚡ Execute Trade</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadForecast() {
+      try {
+        const res = await fetch('/api/analytics');
+        const data = await res.json();
+        const sum = data.summary || {};
+        const fc = data.forecast || {};
+
+        const sysSign = (sum.system_expected_pnl || 0) >= 0 ? '+' : '';
+        document.getElementById('forecast-sys-pnl').textContent = `${sysSign}$${(sum.system_expected_pnl || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+        document.getElementById('forecast-sys-ret').textContent = `${sysSign}${(sum.system_expected_return_pct || 0).toFixed(1)}%`;
+        document.getElementById('forecast-sys-signals').textContent = sum.system_total_signals || 0;
+        document.getElementById('forecast-sys-wr').textContent = `${(sum.system_win_rate || 0).toFixed(1)}%`;
+
+        const actSign = (sum.actual_total_pnl || 0) >= 0 ? '+' : '';
+        document.getElementById('forecast-act-pnl').textContent = `${actSign}$${(sum.actual_total_pnl || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+        document.getElementById('forecast-act-ret').textContent = `${actSign}${(sum.actual_return_pct || 0).toFixed(1)}%`;
+        document.getElementById('forecast-act-trades').textContent = sum.actual_trades_count || 0;
+        document.getElementById('forecast-act-wr').textContent = `${(sum.actual_win_rate || 0).toFixed(1)}%`;
+
+        const capEff = sum.capture_efficiency_pct || 0;
+        document.getElementById('forecast-capture').textContent = `${capEff.toFixed(1)}%`;
+        document.getElementById('forecast-capture-bar').style.width = `${Math.min(100, Math.max(0, capEff))}%`;
+
+        document.getElementById('proj-30d').textContent = `+$${(fc.forecast_30d_pnl || 0).toLocaleString('en-US', {minimumFractionDigits: 0})}`;
+        document.getElementById('proj-90d').textContent = `+$${(fc.forecast_90d_pnl || 0).toLocaleString('en-US', {minimumFractionDigits: 0})}`;
+        document.getElementById('proj-1yr').textContent = `+$${(fc.forecast_1yr_pnl || 0).toLocaleString('en-US', {minimumFractionDigits: 0})}`;
+
+        const wTbody = document.getElementById('weekly-breakdown-tbody');
+        if (!data.weekly || data.weekly.length === 0) {
+          wTbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-500">No weekly records available yet</td></tr>`;
+        } else {
+          wTbody.innerHTML = data.weekly.map(w => {
+            const sysColor = w.system_pnl >= 0 ? 'text-emerald-400' : 'text-rose-400';
+            const actColor = w.actual_pnl >= 0 ? 'text-emerald-400' : 'text-rose-400';
+            return `
+              <tr class="hover:bg-surface/60 transition-colors">
+                <td class="py-3 px-6 font-bold text-white mono">${w.label}</td>
+                <td class="py-3 px-4 mono text-slate-300">${w.system_signals} setups</td>
+                <td class="py-3 px-4 mono font-bold text-emerald-400">${w.system_win_rate}%</td>
+                <td class="py-3 px-4 mono font-bold ${sysColor}">${w.system_pnl >= 0 ? '+' : ''}$${w.system_pnl.toFixed(2)}</td>
+                <td class="py-3 px-4 mono text-slate-300">${w.actual_trades} trades</td>
+                <td class="py-3 px-4 mono font-bold ${actColor}">${w.actual_pnl >= 0 ? '+' : ''}$${w.actual_pnl.toFixed(2)}</td>
+                <td class="py-3 px-6 text-right mono font-bold text-cyan-400">${w.capture_pct}%</td>
+              </tr>
+            `;
+          }).join('');
+        }
+
+        const mTbody = document.getElementById('monthly-breakdown-tbody');
+        if (!data.monthly || data.monthly.length === 0) {
+          mTbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-500">No monthly records available yet</td></tr>`;
+        } else {
+          mTbody.innerHTML = data.monthly.map(m => {
+            const sysColor = m.system_pnl >= 0 ? 'text-emerald-400' : 'text-rose-400';
+            const actColor = m.actual_pnl >= 0 ? 'text-emerald-400' : 'text-rose-400';
+            return `
+              <tr class="hover:bg-surface/60 transition-colors">
+                <td class="py-3 px-6 font-bold text-white mono">${m.label}</td>
+                <td class="py-3 px-4 mono text-slate-300">${m.system_signals} setups</td>
+                <td class="py-3 px-4 mono font-bold text-emerald-400">${m.system_win_rate}%</td>
+                <td class="py-3 px-4 mono font-bold ${sysColor}">${m.system_pnl >= 0 ? '+' : ''}$${m.system_pnl.toFixed(2)} (${m.system_return_pct}%)</td>
+                <td class="py-3 px-4 mono text-slate-300">${m.actual_trades} trades</td>
+                <td class="py-3 px-4 mono font-bold ${actColor}">${m.actual_pnl >= 0 ? '+' : ''}$${m.actual_pnl.toFixed(2)}</td>
+                <td class="py-3 px-6 text-right mono font-bold text-purple-400">${m.capture_pct}%</td>
+              </tr>
+            `;
+          }).join('');
+        }
+
+      } catch (err) {
+        console.error('Failed to load forecast analytics:', err);
+      }
+    }
+
+    async function loadHistory() {
+      const tbody = document.getElementById('closed-trades-tbody');
+      try {
+        const res = await fetch('/api/trades/closed');
+        const closed = await res.json();
+
+        if (closed.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="6" class="text-center py-12 text-slate-500">
+                <div class="text-sm font-medium text-slate-400">No closed trades recorded yet</div>
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        tbody.innerHTML = closed.map(t => {
+          const isWin = (t.pnl_amount || 0) >= 0;
+          const pnlColor = isWin ? 'text-emerald-400' : 'text-rose-400';
+          const pnlSign = isWin ? '+' : '';
+
+          return `
+            <tr class="hover:bg-surface/60 transition-colors">
+              <td class="py-4 px-6">
+                <span class="font-bold text-white mono text-base">${t.ticker}</span>
+                <span class="text-[10px] text-slate-500 ml-2 uppercase mono">${t.system}</span>
+              </td>
+              <td class="py-4 px-4 mono text-xs">
+                <div class="text-white">$${t.entry_price.toFixed(2)}</div>
+                <div class="text-slate-500 text-[11px]">${t.entry_date}</div>
+              </td>
+              <td class="py-4 px-4 mono text-xs">
+                <div class="text-white">$${t.exit_price.toFixed(2)}</div>
+                <div class="text-slate-500 text-[11px]">${t.exit_date}</div>
+              </td>
+              <td class="py-4 px-4 text-xs font-semibold text-slate-300">
+                ${t.exit_reason || 'Manual Exit'}
+              </td>
+              <td class="py-4 px-4 mono text-xs text-slate-400">
+                ${t.shares}
+              </td>
+              <td class="py-4 px-6 text-right mono">
+                <div class="${pnlColor} font-bold text-base">${pnlSign}$${t.pnl_amount ? t.pnl_amount.toFixed(2) : '0.00'}</div>
+                <div class="${pnlColor} text-xs">${pnlSign}${t.pnl_pct ? t.pnl_pct.toFixed(2) : '0.0'}%</div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Failed to load history:', err);
+      }
+    }
+
+    // Capital Modal
+    function openEditCapitalModal() {
+      document.getElementById('input-capital').value = cachedPortfolio.total_capital || 1000;
+      document.getElementById('modal-capital').classList.remove('hidden');
+    }
+    function closeEditCapitalModal() {
+      document.getElementById('modal-capital').classList.add('hidden');
+    }
+    async function saveCapital() {
+      const val = parseFloat(document.getElementById('input-capital').value);
+      if (isNaN(val) || val <= 0) return alert('Please enter a valid amount');
+
+      await fetch('/api/portfolio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ total_capital: val })
+      });
+      closeEditCapitalModal();
+      loadDashboard();
+      if (currentTab === 'forecast') loadForecast();
+    }
+
+    // Trade Modal
+    function openNewTradeModal() {
+      document.getElementById('trade-signal-id').value = '';
+      document.getElementById('trade-ticker').value = '';
+      document.getElementById('trade-price').value = '';
+      document.getElementById('trade-shares').value = '1';
+      document.getElementById('trade-stop').value = '';
+      document.getElementById('trade-target').value = '';
+      document.getElementById('trade-notes').value = '';
+      document.getElementById('modal-trade').classList.remove('hidden');
+    }
+
+    function tradeSignal(s) {
+      document.getElementById('trade-signal-id').value = s.id || '';
+      document.getElementById('trade-ticker').value = s.ticker;
+      document.getElementById('trade-system').value = s.system || 'galaxy';
+      document.getElementById('trade-price').value = s.price.toFixed(2);
+      
+      const capital = cachedPortfolio.cash_available || 1000;
+      const alloc = s.system === 'galaxy' ? capital * 0.33 : capital * 0.20;
+      const shares = Math.max(1, Math.floor(alloc / s.price));
+      document.getElementById('trade-shares').value = shares;
+
+      document.getElementById('trade-stop').value = s.stop_loss.toFixed(2);
+      document.getElementById('trade-target').value = s.target_price.toFixed(2);
+      document.getElementById('trade-notes').value = `${s.signal_type} trigger from ${s.signal_date}`;
+      document.getElementById('modal-trade').classList.remove('hidden');
+    }
+
+    function closeNewTradeModal() {
+      document.getElementById('modal-trade').classList.add('hidden');
+    }
+
+    async function submitNewTrade() {
+      const payload = {
+        ticker: document.getElementById('trade-ticker').value.trim().toUpperCase(),
+        system: document.getElementById('trade-system').value,
+        entry_price: parseFloat(document.getElementById('trade-price').value),
+        shares: parseFloat(document.getElementById('trade-shares').value),
+        stop_loss: parseFloat(document.getElementById('trade-stop').value),
+        target_price: parseFloat(document.getElementById('trade-target').value),
+        notes: document.getElementById('trade-notes').value,
+        signal_id: document.getElementById('trade-signal-id').value || null
+      };
+
+      if (!payload.ticker || isNaN(payload.entry_price) || isNaN(payload.stop_loss) || isNaN(payload.target_price)) {
+        return alert('Please fill in all price and ticker fields');
+      }
+
+      const res = await fetch('/api/trades/open', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.status === 'ok') {
+        closeNewTradeModal();
+        switchTab('dashboard');
+      } else {
+        alert('Error: ' + (data.error || 'Failed to log trade'));
+      }
+    }
+
+    // Close Trade Modal
+    function openExitModal(tradeId) {
+      const t = cachedActiveTrades.find(x => x.id === tradeId);
+      if (!t) return;
+      document.getElementById('close-trade-id').value = t.id;
+      document.getElementById('close-exit-price').value = t.current_price.toFixed(2);
+      const days = t.days_held || 0;
+      const daysText = days === 1 ? '1 day' : `${days} days`;
+      document.getElementById('close-trade-summary').innerHTML = `
+        <div class="font-bold text-white">${t.ticker} (${t.shares} shares)</div>
+        <div>Entry: $${t.entry_price.toFixed(2)} | Target: $${t.target_price.toFixed(2)} | Stop: $${t.stop_loss.toFixed(2)}</div>
+        <div class="mt-1 text-slate-400">Held since entry: ${daysText}</div>
+      `;
+      document.getElementById('modal-close').classList.remove('hidden');
+    }
+
+    function closeExitModal() {
+      document.getElementById('modal-close').classList.add('hidden');
+    }
+
+    async function submitCloseTrade() {
+      const tradeId = parseInt(document.getElementById('close-trade-id').value);
+      const exitPrice = parseFloat(document.getElementById('close-exit-price').value);
+      const exitReason = document.getElementById('close-exit-reason').value;
+
+      if (isNaN(exitPrice)) return alert('Please enter an exit price');
+
+      const res = await fetch('/api/trades/close', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trade_id: tradeId, exit_price: exitPrice, exit_reason: exitReason })
+      });
+      const data = await res.json();
+      if (data.status === 'ok') {
+        closeExitModal();
+        loadDashboard();
+      } else {
+        alert('Error: ' + (data.error || 'Failed to close trade'));
+      }
+    }
+
+    // 1-Click Dual Scanner Trigger
+    async function triggerScanner() {
+      const btn = document.getElementById('scan-btn');
+      const text = document.getElementById('scan-btn-text');
+      const icon = document.getElementById('scan-icon');
+
+      btn.disabled = true;
+      text.textContent = 'Scanning...';
+      icon.classList.add('animate-spin');
+
+      try {
+        const res = await fetch('/api/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ target: 'both', refresh: false })
+        });
+        const data = await res.json();
+        
+        await loadDashboard();
+        if (currentTab === 'signals') await loadSignals();
+        if (currentTab === 'forecast') await loadForecast();
+
+        alert(data.message || 'Scanners executed successfully! Signals and outcomes updated.');
+      } catch (err) {
+        console.error('Scanner error:', err);
+        alert('Scanner execution encountered an issue: ' + err);
+      } finally {
+        btn.disabled = false;
+        text.textContent = 'Run Dual Scanners';
+        icon.classList.remove('animate-spin');
+      }
+    }
+  </script>
+</body>
+</html>

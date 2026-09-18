@@ -1,0 +1,162 @@
+//@version=5
+strategy("Galaxy Active Cash v2 (TradeAlgo-Enhanced Halal Engine)", 
+         overlay=true, 
+         initial_capital=10000, 
+         default_qty_type=strategy.percent_of_equity, 
+         default_qty_value=33.3, 
+         commission_type=strategy.commission.percent, 
+         commission_value=0.05,
+         max_labels_count=500)
+
+// =============================================================================
+// INPUTS & PARAMETERS
+// =============================================================================
+var G_CORE    = "Core Strategy (TradeAlgo Setup #3 Enhanced)"
+rsiPeriod     = input.int(2, "RSI Period", minval=2, maxval=14, group=G_CORE)
+rsiOversold   = input.float(10.0, "Oversold Entry Threshold", minval=2.0, maxval=20.0, step=0.5, group=G_CORE)
+rsiExitLevel  = input.float(70.0, "Overbought Snapback Exit", minval=50.0, maxval=90.0, step=1.0, group=G_CORE)
+trendSmaLen   = input.int(200, "Trend Filter SMA (Primary)", minval=50, maxval=200, group=G_CORE)
+trendSma50Len = input.int(50, "Trend Filter SMA (Secondary)", minval=20, maxval=100, group=G_CORE)
+bbLen         = input.int(20, "Bollinger Band Length", minval=10, maxval=50, group=G_CORE)
+bbStd         = input.float(2.0, "Bollinger Band StdDev", minval=1.0, maxval=3.0, step=0.5, group=G_CORE)
+
+var G_RISK    = "Risk & Holding Rules (Islamic Qabd Enforced)"
+atrPeriod     = input.int(14, "ATR Period (for stop)", minval=7, maxval=21, group=G_RISK)
+atrStopMult   = input.float(1.5, "ATR Stop Multiplier", minval=0.5, maxval=3.0, step=0.25, group=G_RISK)
+targetSmaLen  = input.int(10, "Target SMA (dynamic exit)", minval=5, maxval=20, group=G_RISK)
+minHoldDays   = input.int(3, "Min Hold Days (Islamic Qabd)", minval=3, maxval=3, group=G_RISK, tooltip="Non-negotiable 3-day minimum holding rule")
+maxHoldDays   = input.int(4, "Max Hold Days (Forced Exit)", minval=3, maxval=6, group=G_RISK)
+
+var G_UI      = "Visual Displays & Dashboard"
+showLabels    = input.bool(true, "Show Clean Trade Cards", group=G_UI)
+showDashboard = input.bool(true, "Show Active Trade HUD", group=G_UI)
+showSma200    = input.bool(true, "Plot 200-SMA Trend Line", group=G_UI)
+showSma50     = input.bool(true, "Plot 50-SMA Trend Line", group=G_UI)
+showBB        = input.bool(true, "Plot Bollinger Lower Band", group=G_UI)
+showTarget    = input.bool(true, "Plot 10-SMA Target Line", group=G_UI)
+
+// =============================================================================
+// INDICATOR CALCULATIONS
+// =============================================================================
+rsiValue   = ta.rsi(close, rsiPeriod)
+sma200     = ta.sma(close, trendSmaLen)
+sma50      = ta.sma(close, trendSma50Len)
+sma10      = ta.sma(close, targetSmaLen)
+atrValue   = ta.atr(atrPeriod)
+
+// Bollinger Band (Lower only — entry confirmation)
+bbBasis    = ta.sma(close, bbLen)
+bbDev      = bbStd * ta.stdev(close, bbLen)
+bbLower    = bbBasis - bbDev
+
+// Plot indicators
+plot(showSma200 ? sma200 : na, "200-SMA Trend", color=color.new(#ff9800, 20), linewidth=2)
+plot(showSma50 ? sma50 : na, "50-SMA Trend", color=color.new(#2196f3, 30), linewidth=1)
+plot(showTarget ? sma10 : na, "10-SMA Target", color=color.new(#4caf50, 30), linewidth=1, style=plot.style_stepline)
+plot(showBB ? bbLower : na, "BB Lower", color=color.new(#e91e63, 40), linewidth=1, style=plot.style_circles)
+
+// =============================================================================
+// STRATEGY STATE & TRACKING
+// =============================================================================
+var int entryBarIndex = 0
+var float entryPrice  = 0.0
+var float stopPrice   = 0.0
+var float targetPrice = 0.0
+
+inPosition = strategy.position_size > 0
+barsHeld   = inPosition ? (bar_index - entryBarIndex) : 0
+
+// =============================================================================
+// ENTRY TRIGGER (v2: RSI-2 Panic + BB Penetration + Dual Trend Gate)
+// =============================================================================
+trendOk200  = close > sma200
+trendOk50   = close > sma50
+trendOk     = trendOk200 and trendOk50        // Dual gate: must satisfy BOTH
+panicDip    = rsiValue < rsiOversold
+bbPenetrate = low <= bbLower                   // Low touches or breaks below Lower BB
+
+buySignal = trendOk and panicDip and bbPenetrate and not inPosition
+
+if (buySignal)
+    dynStop   = close - (atrStopMult * atrValue)   // 1.5×ATR dynamic stop
+    dynTarget = sma10                               // 10-SMA dynamic target
+    
+    strategy.entry("Galaxy Long", strategy.long)
+    entryBarIndex := bar_index + 1
+    entryPrice    := close
+    stopPrice     := dynStop
+    targetPrice   := dynTarget
+    
+    if showLabels
+        stopPct   = (close - dynStop) / close * 100.0
+        targetPct = (dynTarget - close) / close * 100.0
+        label.new(bar_index, low * 0.98,
+                  "⚡ GALAXY v2 ENTRY\n" +
+                  "Price: $" + str.tostring(close, "#.##") + "\n" +
+                  "RSI(2): " + str.tostring(rsiValue, "#.#") + " | BB Confirmed\n" +
+                  "Target (10-SMA): $" + str.tostring(dynTarget, "#.##") + " (+" + str.tostring(targetPct, "#.#") + "%)\n" +
+                  "Stop (1.5×ATR): $" + str.tostring(dynStop, "#.##") + " (-" + str.tostring(stopPct, "#.#") + "%)\n" +
+                  "Rule: Hold >= 3 Days ☪️",
+                  color=color.new(#10b981, 10),
+                  textcolor=color.white,
+                  style=label.style_label_up,
+                  size=size.small)
+
+// =============================================================================
+// EXIT RULES (Strict Islamic Qabd: Holding Days >= 3)
+// =============================================================================
+if (inPosition and barsHeld >= minHoldDays)
+    // Update dynamic target to latest 10-SMA each bar
+    curTargetPrice = sma10
+    
+    targetHit = close >= curTargetPrice         // 10-SMA dynamic target hit
+    stopHit   = low <= stopPrice                // 1.5×ATR stop hit
+    rsiSnap   = rsiValue >= rsiExitLevel        // RSI-2 > 70 overbought exit
+    timeLimit = barsHeld >= maxHoldDays          // Day 4 forced close
+    
+    shouldExit = targetHit or stopHit or rsiSnap or timeLimit
+    
+    if (shouldExit)
+        exitReason = targetHit ? "10-SMA Target" : (stopHit ? "ATR Stop" : (rsiSnap ? "RSI Snap" : "Day 4 Limit"))
+        strategy.close("Galaxy Long", comment=exitReason)
+        
+        if showLabels
+            pnlPct = (close - entryPrice) / entryPrice * 100.0
+            pnlColor = pnlPct >= 0 ? color.new(#10b981, 15) : color.new(#ef4444, 15)
+            label.new(bar_index, high * 1.02,
+                      "EXIT (" + exitReason + ")\n" +
+                      "P&L: " + (pnlPct >= 0 ? "+" : "") + str.tostring(pnlPct, "#.##") + "%\n" +
+                      "Held: " + str.tostring(barsHeld) + " Days",
+                      color=pnlColor,
+                      textcolor=color.white,
+                      style=label.style_label_down,
+                      size=size.small)
+
+// =============================================================================
+// MODERN DASHBOARD HUD
+// =============================================================================
+var table hud = table.new(position.top_right, 2, 7, bgcolor=color.new(#1e293b, 10), border_color=color.new(#334155, 30), border_width=1)
+
+if showDashboard and barstate.islast
+    table.cell(hud, 0, 0, "GALAXY v2 ENGINE", bgcolor=color.new(#0f172a, 0), text_color=color.white, text_size=size.small)
+    table.cell(hud, 1, 0, "TradeAlgo Enhanced", bgcolor=color.new(#0f172a, 0), text_color=color.new(#38bdf8, 0), text_size=size.small)
+    
+    table.cell(hud, 0, 1, "RSI (2):", text_color=color.new(#cbd5e1, 0), text_size=size.small)
+    rsiColor = rsiValue < 10 ? color.new(#10b981, 0) : (rsiValue > 70 ? color.new(#ef4444, 0) : color.white)
+    table.cell(hud, 1, 1, str.tostring(rsiValue, "#.#"), text_color=rsiColor, text_size=size.small)
+    
+    table.cell(hud, 0, 2, "200-SMA Gate:", text_color=color.new(#cbd5e1, 0), text_size=size.small)
+    table.cell(hud, 1, 2, trendOk200 ? "✅ ABOVE" : "❌ BELOW", text_color=trendOk200 ? color.green : color.red, text_size=size.small)
+    
+    table.cell(hud, 0, 3, "50-SMA Gate:", text_color=color.new(#cbd5e1, 0), text_size=size.small)
+    table.cell(hud, 1, 3, trendOk50 ? "✅ ABOVE" : "❌ BELOW", text_color=trendOk50 ? color.green : color.red, text_size=size.small)
+    
+    table.cell(hud, 0, 4, "BB Lower:", text_color=color.new(#cbd5e1, 0), text_size=size.small)
+    table.cell(hud, 1, 4, "$" + str.tostring(bbLower, "#.##"), text_color=color.new(#e91e63, 0), text_size=size.small)
+    
+    table.cell(hud, 0, 5, "Position:", text_color=color.new(#cbd5e1, 0), text_size=size.small)
+    table.cell(hud, 1, 5, inPosition ? ("HELD " + str.tostring(barsHeld) + "/4 DAYS") : "FLAT (SEARCHING)", 
+               text_color=inPosition ? color.yellow : color.gray, text_size=size.small)
+               
+    table.cell(hud, 0, 6, "Shariah Guard:", text_color=color.new(#cbd5e1, 0), text_size=size.small)
+    table.cell(hud, 1, 6, "100% QABD (t>=3) ☪️", text_color=color.new(#34d399, 0), text_size=size.small)

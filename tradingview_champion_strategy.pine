@@ -1,0 +1,220 @@
+//@version=5
+strategy("AI Infra Champion Swing Strategy (Clean UI)", overlay=true, initial_capital=10000, default_qty_type=strategy.percent_of_equity, default_qty_value=20, commission_type=strategy.commission.percent, commission_value=0.05)
+
+// =============================================================================
+// 1. CONFIGURATION & TOGGLES
+// =============================================================================
+grp_islamic = "0. Islamic Ownership Rule"
+min_hold_days = input.int(3, "Minimum Holding Period (Trading Days)", minval=3, group=grp_islamic, tooltip="Constructive possession rule: no exit is allowed before Day t+3.")
+
+grp_trend = "1. Trend & Benchmark Filters"
+lookback_rs      = input.int(63, "Relative Strength Lookback (Days)", minval=10, group=grp_trend)
+bench_ticker     = input.symbol("NASDAQ:SMH", "Segment Benchmark ETF", group=grp_trend, tooltip="Benchmark ETF (e.g. NASDAQ:SMH for Semis, NASDAQ:QQQ for Tech, AMEX:XLU for Power, AMEX:SPY for Servers).")
+use_regime       = input.bool(true, "Enable SOXX Regime Filter (SOXX > 200-SMA)", group=grp_trend)
+regime_ticker    = input.symbol("NASDAQ:SOXX", "Sector Regime ETF", group=grp_trend)
+
+grp_entry = "2. Entry Triggers"
+enable_pocket_pivot = input.bool(true, "Enable Pocket Pivot Triggers (Volume Accumulation)", group=grp_entry)
+enable_vcp_dip      = input.bool(true, "Enable Stage 2 Dip Triggers (10/20 EMA Pullback)", group=grp_entry)
+ema_prox_pct        = input.float(2.0, "EMA Dip Proximity (%)", group=grp_entry)
+
+grp_risk = "3. Risk & Targets"
+atr_len          = input.int(14, "ATR Period", group=grp_risk)
+atr_floor_mult   = input.float(1.5, "Stop Minimum Floor (x ATR)", group=grp_risk)
+t1_atr_mult      = input.float(3.0, "Target 1 Distance (x ATR)", group=grp_risk)
+swing_low_len    = input.int(10, "Swing Low Lookback (Days)", group=grp_risk)
+max_stop_pct     = input.float(10.0, "Max Allowed Stop Width (%)", group=grp_risk)
+
+grp_ui = "4. Visual Display Options"
+show_trade_cards = input.bool(true, "Show Clean Trade Detail Labels on Chart", group=grp_ui)
+show_target_lines= input.bool(true, "Show Stop & Target Lines", group=grp_ui)
+show_mas         = input.bool(true, "Show Moving Averages (20 EMA, 50 SMA, 200 SMA)", group=grp_ui)
+show_dashboard   = input.bool(true, "Show Status Table in Top-Right", group=grp_ui)
+
+// =============================================================================
+// TECHNICAL INDICATORS
+// =============================================================================
+ma_10_ema  = ta.ema(close, 10)
+ma_20_ema  = ta.ema(close, 20)
+ma_50_sma  = ta.sma(close, 50)
+ma_150_sma = ta.sma(close, 150)
+ma_200_sma = ta.sma(close, 200)
+
+val_atr14     = ta.atr(atr_len)
+val_swing_low = ta.lowest(low, swing_low_len)
+high_52w      = ta.highest(high, 252)
+low_52w       = ta.lowest(low, 252)
+sma200_slope_positive = ma_200_sma > ma_200_sma[20]
+
+// Minervini Stage 2 Master Criteria
+minervini_stage2 = (close > ma_50_sma) and (ma_50_sma > ma_150_sma) and (ma_150_sma > ma_200_sma) and sma200_slope_positive and (close >= 0.75 * high_52w) and (close >= 1.30 * low_52w)
+
+// Benchmark Relative Strength
+bench_close = request.security(bench_ticker, "D", close, ignore_invalid_symbol=true)
+bench_valid = not na(bench_close) and not na(bench_close[lookback_rs]) and bench_close[lookback_rs] > 0
+stock_ret   = (close - close[lookback_rs]) / close[lookback_rs]
+bench_ret   = bench_valid ? ((bench_close - bench_close[lookback_rs]) / bench_close[lookback_rs]) : 0.0
+val_rs      = bench_valid ? ((stock_ret - bench_ret) * 100.0) : (stock_ret * 100.0)
+pass_rs     = (stock_ret > 0) and (val_rs > 0)
+
+// Sector Regime (SOXX > 200-SMA)
+soxx_close  = request.security(regime_ticker, "D", close, ignore_invalid_symbol=true)
+soxx_sma200 = request.security(regime_ticker, "D", ta.sma(close, 200), ignore_invalid_symbol=true)
+pass_regime = not use_regime or na(soxx_close) or na(soxx_sma200) or (soxx_close > soxx_sma200)
+
+// =============================================================================
+// SIGNALS CALCULATION
+// =============================================================================
+is_up_day = close > open
+is_down_day = close < close[1]
+var float max_down_vol = 0.0
+max_down_vol := 0.0
+for j = 1 to 10
+    if is_down_day[j]
+        max_down_vol := math.max(max_down_vol, volume[j])
+
+pocket_pivot_vol = is_up_day and (volume > max_down_vol) and (max_down_vol > 0)
+near_base = ((math.abs(close - ma_10_ema) / close) <= 0.025) or ((math.abs(close - ma_20_ema) / close) <= 0.025) or ((math.abs(close - ma_50_sma) / close) <= 0.025)
+trigger_pocket_pivot = enable_pocket_pivot and pocket_pivot_vol and near_base and (close > ma_50_sma) and pass_rs and pass_regime
+
+ema_dip = (math.abs(close - ma_10_ema) / close <= (ema_prox_pct / 100.0)) or (math.abs(close - ma_20_ema) / close <= (ema_prox_pct / 100.0))
+trigger_vcp_dip = enable_vcp_dip and minervini_stage2 and ema_dip and pass_rs and pass_regime
+
+signal_entry = trigger_pocket_pivot or trigger_vcp_dip
+sig_label_text = trigger_pocket_pivot ? (trigger_vcp_dip ? "DUAL (Pivot+Dip)" : "Pocket Pivot") : "Stage 2 Dip"
+
+// Stop Loss & T1 Target
+var float valid_structural = na
+if (ma_50_sma < close) and (val_swing_low < close)
+    valid_structural := math.min(ma_50_sma, val_swing_low)
+else if (ma_50_sma < close)
+    valid_structural := ma_50_sma
+else if (val_swing_low < close)
+    valid_structural := val_swing_low
+else
+    valid_structural := close - (2.0 * val_atr14)
+
+volatility_floor_stop = close - (atr_floor_mult * val_atr14)
+calculated_stop = math.min(valid_structural, volatility_floor_stop)
+stop_dist = close - calculated_stop
+stop_dist_pct = (stop_dist / close) * 100.0
+
+calculated_t1 = close + (t1_atr_mult * val_atr14)
+t1_dist = calculated_t1 - close
+rr_t1 = stop_dist > 0 ? (t1_dist / stop_dist) : 0.0
+
+gate_passed = (rr_t1 >= 1.5) and (stop_dist_pct <= max_stop_pct)
+signal_trigger = signal_entry and gate_passed
+
+// =============================================================================
+// POSITION & STATE TRACKING
+// =============================================================================
+var int entry_bar = 0
+var float entry_price = na
+var float cur_stop = na
+var float cur_t1 = na
+var float highest_high = na
+var int ema_break_count = 0
+var bool t1_hit = false
+
+// Execute Entry ONLY on clean first trigger
+if signal_trigger and strategy.position_size == 0
+    strategy.entry("Buy", strategy.long)
+    entry_bar := bar_index
+    entry_price := close
+    cur_stop := calculated_stop
+    cur_t1 := calculated_t1
+    highest_high := high
+    ema_break_count := 0
+    t1_hit := false
+
+    if show_trade_cards
+        label_text = "🟢 BUY " + sig_label_text + "
+" +
+                     "Entry: $" + str.tostring(close, "#.##") + "
+" +
+                     "Stop:  $" + str.tostring(calculated_stop, "#.##") + " (-" + str.tostring(stop_dist_pct, "#.#") + "%)
+" +
+                     "T1:    $" + str.tostring(calculated_t1, "#.##") + " (+" + str.tostring((t1_dist/close)*100, "#.#") + "%)
+" +
+                     "R:R:   " + str.tostring(rr_t1, "#.##") + ":1"
+        label.new(bar_index, low - (val_atr14 * 0.4), text=label_text, color=color.new(color.teal, 10), textcolor=color.white, style=label.style_label_up, size=size.small)
+
+if strategy.position_size > 0
+    highest_high := math.max(highest_high, high)
+    bars_in_trade = bar_index - entry_bar
+    
+    if close < ma_20_ema
+        ema_break_count := ema_break_count + 1
+    else
+        ema_break_count := 0
+
+    // T1 Hit: Move Stop to Breakeven
+    if high >= cur_t1 and not t1_hit
+        t1_hit := true
+        cur_stop := entry_price
+        if show_trade_cards
+            label.new(bar_index, high + (val_atr14 * 0.3), text="🎯 T1 REACHED (+3 ATR)
+Stop -> Breakeven", color=color.new(color.green, 15), textcolor=color.white, style=label.style_label_down, size=size.tiny)
+
+    // Islamic Hold Gate (>= 3 trading days)
+    if bars_in_trade >= min_hold_days
+        // 1. Stop Hit
+        if low <= cur_stop
+            strategy.close("Buy", comment="Stop Hit")
+            if show_trade_cards
+                pnl = (cur_stop - entry_price) / entry_price * 100.0
+                label.new(bar_index, low - (val_atr14 * 0.3), text="🛑 STOP HIT (" + str.tostring(pnl, "+#.#") + "%)", color=color.new(color.red, 15), textcolor=color.white, style=label.style_label_up, size=size.tiny)
+        // 2. Chandelier Trailing Exit
+        chandelier_stop = highest_high - (3.0 * val_atr14)
+        if close < chandelier_stop
+            strategy.close("Buy", comment="Chandelier Exit")
+            if show_trade_cards
+                pnl = (close - entry_price) / entry_price * 100.0
+                label.new(bar_index, high + (val_atr14 * 0.3), text="🔄 CHANDELIER EXIT (" + str.tostring(pnl, "+#.#") + "%)", color=color.new(color.orange, 15), textcolor=color.white, style=label.style_label_down, size=size.tiny)
+        // 3. 2 Consecutive Closes below 20-EMA
+        if ema_break_count >= 2
+            strategy.close("Buy", comment="2-Close EMA Break")
+            if show_trade_cards
+                pnl = (close - entry_price) / entry_price * 100.0
+                label.new(bar_index, high + (val_atr14 * 0.3), text="📉 20-EMA BREAK EXIT (" + str.tostring(pnl, "+#.#") + "%)", color=color.new(color.orange, 15), textcolor=color.white, style=label.style_label_down, size=size.tiny)
+
+// =============================================================================
+// CLEAN ON-CHART VISUALS (NO CLUTTER)
+// =============================================================================
+// Clean Moving Averages
+plot(show_mas ? ma_20_ema : na, "20 EMA (Dip Support)", color=color.new(#00e5ff, 20), linewidth=2)
+plot(show_mas ? ma_50_sma : na, "50 SMA (Trend Baseline)", color=color.new(#ff9100, 20), linewidth=2)
+plot(show_mas ? ma_200_sma : na, "200 SMA (Macro Trend)", color=color.new(#b388ff, 40), linewidth=1)
+
+// Dynamic Stop Loss and Target Lines (Only while inside an active trade)
+in_trade = strategy.position_size > 0
+plot(show_target_lines and in_trade ? cur_stop : na, "Active Stop Loss", color=color.new(#ff5252, 0), style=plot.style_linebr, linewidth=2)
+plot(show_target_lines and in_trade ? cur_t1 : na, "Target 1 Level", color=color.new(#00e676, 0), style=plot.style_linebr, linewidth=2)
+
+// Highlight ONLY the actual first entry candle
+bgcolor(signal_trigger and (strategy.position_size == 0) ? color.new(#00e676, 85) : na, title="Entry Highlight")
+
+// Real-Time Dashboard (Top-Right)
+var table dash = table.new(position.top_right, 2, 7, bgcolor=color.new(#1e222d, 10), border_color=#363c4e, border_width=1)
+if barstate.islast and show_dashboard
+    table.cell(dash, 0, 0, "System Condition", bgcolor=#2a2e39, text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 0, "Status", bgcolor=#2a2e39, text_color=color.white, text_size=size.small)
+
+    table.cell(dash, 0, 1, "1. Islamic Rule", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 1, "🔒 MIN 3 DAYS", bgcolor=color.new(#00897b, 40), text_color=color.white, text_size=size.small)
+
+    table.cell(dash, 0, 2, "2. Minervini Stage 2", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 2, minervini_stage2 ? "✅ STAGE 2" : "❌ NO STAGE 2", bgcolor=minervini_stage2 ? color.new(#2e7d32, 40) : color.new(#c62828, 40), text_color=color.white, text_size=size.small)
+
+    table.cell(dash, 0, 3, "3. 63d RS vs Bench", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 3, (val_rs > 0 ? "✅ +" : "❌ ") + str.tostring(val_rs, "#.#") + "%", bgcolor=pass_rs ? color.new(#2e7d32, 40) : color.new(#c62828, 40), text_color=color.white, text_size=size.small)
+
+    table.cell(dash, 0, 4, "4. Accumulation Vol", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 4, pocket_pivot_vol ? "🚀 POCKET PIVOT" : "NORMAL", bgcolor=pocket_pivot_vol ? color.new(#1565c0, 40) : color.new(#424242, 40), text_color=color.white, text_size=size.small)
+
+    table.cell(dash, 0, 5, "5. Pullback Support", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 5, ema_dip ? "✅ AT 10/20 EMA" : "EXTENDED", bgcolor=ema_dip ? color.new(#2e7d32, 40) : color.new(#424242, 40), text_color=color.white, text_size=size.small)
+
+    table.cell(dash, 0, 6, "Signal Trigger", bgcolor=#2a2e39, text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 6, signal_trigger ? ("🚀 " + sig_label_text) : "WAITING", bgcolor=signal_trigger ? color.lime : color.gray, text_color=color.black, text_size=size.small)

@@ -266,3 +266,68 @@ scoring:
   # A missing pillar is renormalised away, never scored zero — a company must not
   # be punished twice for a disclosure gap.
   missing_pillar: renormalise
+
+# ---------------------------------------------------------------------------
+# Swing trading engine — Speed 1 (implementation_plan.md Part 2)
+# ---------------------------------------------------------------------------
+swing:
+  # Regime filter: primary sector benchmark must be above 200-DMA
+  regime:
+    benchmark: SOXX
+    dma_period: 200
+    enabled: true
+
+  # Earnings filter: avoid entry within this many trading days of earnings
+  earnings:
+    buffer_days: 5
+    post_earnings_settle_days: 2
+    enabled: true
+
+  # Trend and relative strength parameters
+  trend:
+    formation_lookback_days: 63  # ~3 months (momentum continuation zone)
+    dma_period: 50               # Institutional medium-term trend
+    require_positive_return: true
+    require_positive_rs: true
+
+  # Dip trigger parameters (Condition A)
+  dip_trigger:
+    ema_period: 20
+    ema_proximity_threshold: 0.01  # within 1% of 20-EMA
+    rsi_period: 2
+    rsi_oversold_threshold: 10.0   # RSI(2) < 10
+
+  # Reversal confirmation (Condition B)
+  candlestick:
+    enabled: true
+    patterns:
+      - hammer
+      - engulfing
+      - inside_up
+
+  # Trade plan parameters
+  trade_plan:
+    atr_period: 14
+    atr_floor_mult: 1.5           # Minimum stop distance = 1.5 * ATR
+    fallback_stop_atr_mult: 2.0   # Fallback if no structural stop
+    swing_low_window: 10          # 10-day swing low
+    t1_atr_mult: 3.0              # T1 target = entry + 3.0 * ATR
+    t1_scale_out_pct: 0.50        # Sell 50% at T1
+    move_stop_to_breakeven_at_t1: true
+    min_rr_t1: 1.5                # Minimum R:R at T1
+
+  # Stop width caps by tier
+  gates:
+    core:
+      max_stop_pct: 10.0
+      min_rr1: 1.5
+    high_beta:
+      max_stop_pct: 15.0
+      min_rr1: 1.5
+
+  # Runner trailing exit parameters
+  runner:
+    chandelier_atr_mult: 3.0
+    ema_consecutive_closes: 2     # 2 closes below 20-EMA
+    rs_loss_consecutive_days: 2   # 2 days underperforming benchmark
+

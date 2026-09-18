@@ -1,0 +1,192 @@
+//@version=5
+strategy("AI Infra & Semi Swing Strategy (Two-Speed System)", overlay=true, initial_capital=10000, default_qty_type=strategy.percent_of_equity, default_qty_value=20, commission_type=strategy.commission.percent, commission_value=0.05)
+
+// =============================================================================
+// INPUTS & CONFIGURATION
+// =============================================================================
+grp_trend = "1. Trend & Benchmark Filters"
+lookback_rs      = input.int(63, "Formation Lookback (Days)", minval=10, group=grp_trend, tooltip="Lookback for 63-day return and relative strength.")
+bench_ticker     = input.symbol("NASDAQ:SMH", "Segment Benchmark ETF", group=grp_trend, tooltip="Benchmark ETF (e.g. NASDAQ:SMH for Semis, NASDAQ:QQQ for Tech/Software, AMEX:XLU for Power, AMEX:SPY for Servers).")
+use_regime       = input.bool(true, "Enable SOXX Regime Filter (SOXX > 200-DMA)", group=grp_trend)
+regime_ticker    = input.symbol("NASDAQ:SOXX", "Sector Regime ETF", group=grp_trend)
+
+grp_dip = "2. Dip Trigger & Indicators"
+ema_len          = input.int(20, "EMA Period (Pullback Support)", group=grp_dip)
+sma_len          = input.int(50, "Trend SMA Period", group=grp_dip)
+rsi_len          = input.int(2, "RSI Period", group=grp_dip)
+rsi_threshold    = input.float(10.0, "RSI Oversold Threshold", group=grp_dip)
+ema_prox_pct     = input.float(1.0, "EMA Proximity Threshold (%)", group=grp_dip, tooltip="Price within this % of 20-EMA counts as a pullback.")
+
+grp_candle = "3. Candlestick Confirmation"
+use_candle_filter = input.bool(true, "Require Bullish Reversal Candle", group=grp_candle, tooltip="Uncheck to test Ablation 2 (Dip only, 10x signal volume)")
+
+grp_risk = "4. Trade Plan & Sizing"
+atr_len          = input.int(14, "ATR Period", group=grp_risk)
+atr_floor_mult   = input.float(1.5, "Stop Minimum Volatility Floor (x ATR)", group=grp_risk)
+t1_atr_mult      = input.float(3.0, "Target 1 Distance (x ATR)", group=grp_risk)
+swing_low_len    = input.int(10, "Swing Low Lookback (Days)", group=grp_risk)
+exit_mode        = input.string("Fixed 25 Days", "Backtest Exit Mode", options=["Fixed 10 Days", "Fixed 25 Days", "Target 1 & Stop Loss", "Full Trailing & Targets"], group=grp_risk)
+max_stop_pct     = input.float(10.0, "Max Allowed Stop Width (%)", group=grp_risk)
+
+// =============================================================================
+// TECHNICAL INDICATORS
+// =============================================================================
+ma_20_ema = ta.ema(close, ema_len)
+ma_50_sma = ta.sma(close, sma_len)
+val_rsi2  = ta.rsi(close, rsi_len)
+val_atr14 = ta.atr(atr_len)
+val_swing_low = ta.lowest(low, swing_low_len)
+
+// External Security: Segment Benchmark Relative Strength
+// Use daily close from benchmark
+bench_close = request.security(bench_ticker, "D", close, ignore_invalid_symbol=true)
+bench_valid = not na(bench_close) and not na(bench_close[lookback_rs]) and bench_close[lookback_rs] > 0
+
+stock_ret = (close - close[lookback_rs]) / close[lookback_rs]
+bench_ret = bench_valid ? ((bench_close - bench_close[lookback_rs]) / bench_close[lookback_rs]) : 0.0
+val_rs    = bench_valid ? ((stock_ret - bench_ret) * 100.0) : (stock_ret * 100.0)
+
+// External Security: Sector Regime (SOXX > 200-SMA)
+soxx_close  = request.security(regime_ticker, "D", close, ignore_invalid_symbol=true)
+soxx_sma200 = request.security(regime_ticker, "D", ta.sma(close, 200), ignore_invalid_symbol=true)
+pass_regime = not use_regime or na(soxx_close) or na(soxx_sma200) or (soxx_close > soxx_sma200)
+
+// =============================================================================
+// CANDLESTICK PATTERN RECOGNITION
+// =============================================================================
+body = math.abs(close - open)
+lower_wick = math.min(open, close) - low
+upper_wick = high - math.max(open, close)
+
+is_hammer    = (lower_wick >= 2.0 * body) and (upper_wick <= body * 0.6) and (close > open)
+is_engulfing = (close[1] < open[1]) and (close > open) and (close >= open[1]) and (open <= close[1])
+is_inside_up = (high <= high[1]) and (low >= low[1]) and (close > close[1])
+
+has_reversal_candle = is_hammer or is_engulfing or is_inside_up
+candle_name = is_hammer ? "Hammer" : (is_engulfing ? "Engulfing" : (is_inside_up ? "Inside Up" : "None"))
+
+// =============================================================================
+// THE 6 ENTRY FILTERS
+// =============================================================================
+f1_regime   = pass_regime
+f2_own_tr   = stock_ret > 0
+f3_rs       = val_rs > 0
+f4_dma50    = close > ma_50_sma
+f5_dip      = (math.abs(close - ma_20_ema) / close <= (ema_prox_pct / 100.0)) or (val_rsi2 < rsi_threshold)
+f6_candle   = not use_candle_filter or has_reversal_candle
+
+all_filters_pass = f1_regime and f2_own_tr and f3_rs and f4_dma50 and f5_dip and f6_candle
+
+// =============================================================================
+// TRADE PLAN: STRUCTURAL STOP & T1 TARGET CALCULATION
+// =============================================================================
+var float valid_structural = na
+if (ma_50_sma < close) and (val_swing_low < close)
+    valid_structural := math.min(ma_50_sma, val_swing_low)
+else if (ma_50_sma < close)
+    valid_structural := ma_50_sma
+else if (val_swing_low < close)
+    valid_structural := val_swing_low
+else
+    valid_structural := close - (2.0 * val_atr14)
+
+volatility_floor_stop = close - (atr_floor_mult * val_atr14)
+calculated_stop = math.min(valid_structural, volatility_floor_stop)
+stop_dist = close - calculated_stop
+stop_dist_pct = (stop_dist / close) * 100.0
+
+calculated_t1 = close + (t1_atr_mult * val_atr14)
+t1_dist = calculated_t1 - close
+rr_t1 = stop_dist > 0 ? (t1_dist / stop_dist) : 0.0
+
+gate_passed = (rr_t1 >= 1.5) and (stop_dist_pct <= max_stop_pct)
+signal_trigger = all_filters_pass and gate_passed
+
+// =============================================================================
+// STRATEGY EXECUTION & BACKTESTING LOGIC
+// =============================================================================
+var int entry_bar = 0
+var float cur_stop = na
+var float cur_t1 = na
+var float highest_high = na
+var int ema_break_count = 0
+var bool t1_hit = false
+
+if signal_trigger and strategy.position_size == 0
+    strategy.entry("Swing Long", strategy.long)
+    entry_bar := bar_index
+    cur_stop := calculated_stop
+    cur_t1 := calculated_t1
+    highest_high := high
+    ema_break_count := 0
+    t1_hit := false
+
+if strategy.position_size > 0
+    highest_high := math.max(highest_high, high)
+    
+    if close < ma_20_ema
+        ema_break_count := ema_break_count + 1
+    else
+        ema_break_count := 0
+
+    if exit_mode == "Fixed 10 Days"
+        if bar_index - entry_bar >= 10
+            strategy.close("Swing Long", comment="10d Horizon Exit")
+    else if exit_mode == "Fixed 25 Days"
+        if bar_index - entry_bar >= 25
+            strategy.close("Swing Long", comment="25d Horizon Exit")
+    else if exit_mode == "Target 1 & Stop Loss"
+        if low <= cur_stop
+            strategy.close("Swing Long", comment="Stop Loss Hit")
+        else if high >= cur_t1
+            strategy.close("Swing Long", comment="T1 Hit (+3 ATR)")
+    else if exit_mode == "Full Trailing & Targets"
+        if low <= cur_stop
+            strategy.close("Swing Long", comment="Stop Hit")
+        if high >= cur_t1 and not t1_hit
+            t1_hit := true
+            cur_stop := strategy.position_avg_price
+        chandelier_stop = highest_high - (3.0 * val_atr14)
+        if close < chandelier_stop
+            strategy.close("Swing Long", comment="Chandelier Exit")
+        if ema_break_count >= 2
+            strategy.close("Swing Long", comment="2-Close EMA Break")
+
+// =============================================================================
+// VISUAL PLOTTING & DASHBOARD
+// =============================================================================
+plot(ma_20_ema, "20 EMA (Dip Support)", color=color.new(color.teal, 0), linewidth=2)
+plot(ma_50_sma, "50 SMA (Trend Baseline)", color=color.new(color.orange, 0), linewidth=2)
+
+plot(strategy.position_size > 0 ? cur_stop : na, "Stop Loss Level", color=color.new(color.red, 0), style=plot.style_linebr, linewidth=2)
+plot(strategy.position_size > 0 ? cur_t1 : na, "Target 1 Level", color=color.new(color.green, 0), style=plot.style_linebr, linewidth=2)
+
+plotshape(signal_trigger, title="Signal Buy Setup", style=shape.triangleup, location=location.belowbar, color=color.lime, size=size.normal, text="BUY DIP")
+bgcolor(signal_trigger ? color.new(color.green, 85) : na, title="Signal Highlight")
+
+// Real-time Status Dashboard Table in Top-Right
+var table dash = table.new(position.top_right, 2, 8, bgcolor=color.new(color.black, 20), border_color=color.gray, border_width=1)
+if barstate.islast
+    table.cell(dash, 0, 0, "System Filter", bgcolor=color.navy, text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 0, "Current Status", bgcolor=color.navy, text_color=color.white, text_size=size.small)
+
+    table.cell(dash, 0, 1, "1. Regime (SOXX > 200d)", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 1, f1_regime ? "✅ PASS" : "❌ FAIL", bgcolor=f1_regime ? color.new(color.green, 60) : color.new(color.red, 60), text_color=color.white, text_size=size.small)
+
+    table.cell(dash, 0, 2, "2. 63d Own Trend > 0", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 2, (stock_ret > 0 ? "✅ +" : "❌ ") + str.tostring(stock_ret * 100, "#.#") + "%", bgcolor=f2_own_tr ? color.new(color.green, 60) : color.new(color.red, 60), text_color=color.white, text_size=size.small)
+
+    table.cell(dash, 0, 3, "3. 63d RS vs Benchmark", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 3, (val_rs > 0 ? "✅ +" : "❌ ") + str.tostring(val_rs, "#.#") + "%", bgcolor=f3_rs ? color.new(color.green, 60) : color.new(color.red, 60), text_color=color.white, text_size=size.small)
+
+    table.cell(dash, 0, 4, "4. Above 50-DMA", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 4, f4_dma50 ? "✅ PASS" : "❌ FAIL", bgcolor=f4_dma50 ? color.new(color.green, 60) : color.new(color.red, 60), text_color=color.white, text_size=size.small)
+
+    table.cell(dash, 0, 5, "5. 20-EMA Dip / RSI(2)", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 5, f5_dip ? ("✅ RSI: " + str.tostring(val_rsi2, "#.#")) : "❌ NO DIP", bgcolor=f5_dip ? color.new(color.green, 60) : color.new(color.red, 60), text_color=color.white, text_size=size.small)
+
+    table.cell(dash, 0, 6, "6. Reversal Candle", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 6, has_reversal_candle ? ("✅ " + candle_name) : (use_candle_filter ? "❌ NONE" : "⚪ SKIPPED"), bgcolor=f6_candle ? color.new(color.green, 60) : color.new(color.red, 60), text_color=color.white, text_size=size.small)
+
+    table.cell(dash, 0, 7, "Signal Setup Status", bgcolor=color.navy, text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 7, signal_trigger ? "🚀 ACTIVE SIGNAL" : "WAITING", bgcolor=signal_trigger ? color.lime : color.gray, text_color=color.black, text_size=size.small)

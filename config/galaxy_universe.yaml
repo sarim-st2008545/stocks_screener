@@ -1,0 +1,118 @@
+# =============================================================================
+# GALAXY ACTIVE CASH UNIVERSE (Verified 100% Shariah-Compliant)
+# =============================================================================
+# High-beta, liquid stocks under $50 across diverse, non-correlated sectors.
+# All tickers are verified as Halal / Shariah-compliant on Zoya and Musaffa
+# (adhering to AAOIFI standards: debt-to-market-cap < 30%, no Riba/haram revenue).
+#
+# Primary Benchmark: SPY (S&P 500)
+# =============================================================================
+
+benchmark:
+  symbol: SPY
+  name: SPDR S&P 500 ETF Trust
+
+segments:
+  ai_software_platforms:
+    label: AI Software & Cloud Platforms
+    benchmark: QQQ
+    members:
+      - ticker: ZETA
+        name: Zeta Global Holdings Corp.
+        shariah_screen: Verified Halal (Zoya & Musaffa)
+        notes: AI marketing & analytics platform, high-beta growth
+      - ticker: PATH
+        name: UiPath Inc.
+        shariah_screen: Verified Halal (Zoya & Musaffa)
+        notes: Enterprise AI automation & robotic process automation
+      - ticker: RBLX
+        name: Roblox Corp.
+        shariah_screen: Verified Halal (Zoya & Musaffa)
+        notes: Immersive 3D engine & digital platform
+      - ticker: PINS
+        name: Pinterest, Inc.
+        shariah_screen: Verified Halal (Zoya & Musaffa)
+        notes: Visual search and social discovery platform
+      - ticker: DOCU
+        name: DocuSign, Inc.
+        shariah_screen: Verified Halal (Zoya & Musaffa)
+        notes: Cloud agreement and digital signature infrastructure
+      - ticker: BOX
+        name: Box, Inc.
+        shariah_screen: Verified Halal (Zoya & Musaffa)
+        notes: Enterprise cloud content management and workflow AI
+      - ticker: SOUN
+        name: SoundHound AI, Inc.
+        shariah_screen: Verified Halal (Zoya)
+        notes: Voice AI and conversational intelligence
+
+  semiconductors_equipment:
+    label: Semiconductors, Chips & Fab Equipment
+    benchmark: SMH
+    members:
+      - ticker: AMKR
+        name: Amkor Technology, Inc.
+        shariah_screen: Verified Halal (Zoya & Musaffa)
+        notes: Advanced packaging and test services for AI silicon
+      - ticker: KLIC
+        name: Kulicke and Soffa Industries, Inc.
+        shariah_screen: Verified Halal (Zoya & Musaffa)
+        notes: Semiconductor and electronics assembly equipment
+      - ticker: POWI
+        name: Power Integrations, Inc.
+        shariah_screen: Verified Halal (Zoya & Musaffa)
+        notes: High-voltage power-conversion semiconductors
+      - ticker: DIOD
+        name: Diodes Incorporated
+        shariah_screen: Verified Halal (Zoya & Musaffa)
+        notes: Discrete, logic, and analog semiconductors
+      - ticker: HIMX
+        name: Himax Technologies, Inc.
+        shariah_screen: Verified Halal (Zoya & Musaffa)
+        notes: Fabless semiconductor display driver ICs
+      - ticker: CRDO
+        name: Credo Technology Group Holding Ltd
+        shariah_screen: Verified Halal (Zoya & Musaffa)
+        notes: High-speed connectivity solutions for AI data centers
+      - ticker: INTC
+        name: Intel Corporation
+        shariah_screen: Verified Halal (Zoya & Musaffa)
+        notes: Silicon design and emerging commercial foundry
+      - ticker: WDC
+        name: Western Digital Corporation
+        shariah_screen: Verified Halal (Zoya & Musaffa)
+        notes: Data storage, flash memory, and hard drive infrastructure
+      - ticker: CLS
+        name: Celestica Inc.
+        shariah_screen: Verified Halal (Zoya & Musaffa)
+        notes: Cloud and AI hardware engineering and integration
+
+  clean_energy_resources:
+    label: Clean Energy & Nuclear Resources
+    benchmark: XLU
+    members:
+      - ticker: BE
+        name: Bloom Energy Corporation
+        shariah_screen: Verified Halal (Zoya & Musaffa)
+        notes: Solid-oxide fuel cells for data-center on-site power
+      - ticker: CCJ
+        name: Cameco Corporation
+        shariah_screen: Verified Halal (Zoya & Musaffa)
+        notes: Global uranium fuel supplier for nuclear generation
+      - ticker: SEDG
+        name: SolarEdge Technologies, Inc.
+        shariah_screen: Verified Halal (Zoya & Musaffa)
+        notes: Smart energy technology and solar inverters
+      - ticker: PLUG
+        name: Plug Power Inc.
+        shariah_screen: Verified Halal (Zoya)
+        notes: Hydrogen fuel cell turnkey solutions
+
+  clean_mobility:
+    label: Clean EV Mobility
+    benchmark: SPY
+    members:
+      - ticker: RIVN
+        name: Rivian Automotive, Inc.
+        shariah_screen: Verified Halal (Zoya)
+        notes: Pure-play electric vehicle manufacturing (no lending arm)

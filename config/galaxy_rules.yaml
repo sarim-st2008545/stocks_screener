@@ -1,0 +1,50 @@
+# =============================================================================
+# GALAXY ACTIVE CASH TRADING RULES (v2 — TradeAlgo Enhanced)
+# =============================================================================
+# High-turnover swing-scalp strategy (3 to 4 day holding cycle)
+# Core Strategy: Connors RSI-2 Panic Capitulation with Bollinger Band Confirmation
+# Enhanced: TradeAlgo Setup #3 Mean Reversion — backtested PF 1.92 over 5 years
+# Portfolio Theory: Thomas Cover Log-Wealth Growth & Risk-of-Ruin Minimization
+# Shariah Law: Strictly enforces Islamic Qabd (Minimum 3 full trading days)
+# =============================================================================
+
+regime:
+  benchmark: SPY
+  filter: sma_200
+  enabled: true
+  description: "Macro safety check: SPY must be above its 200-day moving average"
+
+trend:
+  filters:
+    - sma_200   # Primary structural trend: Close > 200-SMA
+    - sma_50    # Secondary momentum trend: Close > 50-SMA
+  dual_gate: true  # Both must be satisfied (confirmed uptrend only)
+  description: "Dual trend gate: Stock above BOTH 50-SMA and 200-SMA (avoid choppy ranges)"
+
+trigger:
+  indicator: rsi
+  period: 2
+  oversold_threshold: 10.0
+  bollinger_confirmation: true          # Low must penetrate Lower Bollinger Band
+  bollinger_window: 20
+  bollinger_std: 2.0
+  description: "RSI(2) < 10 AND Low <= Lower BB(20, 2.0) — double-confirmed panic capitulation"
+
+exit_rules:
+  holding:
+    min_days: 3   # Hard Islamic Qabd constraint: No selling before 3 trading days
+    max_days: 4   # Rapid cash turnover: Force exit at Day 4 close if not hit earlier
+  target:
+    type: dynamic             # 10-SMA dynamic target (rides the mean)
+    sma_period: 10            # Exit when Close >= 10-period SMA
+    description: "Dynamic 10-SMA target: sell when price reverts to its 10-day mean"
+  stop_loss:
+    type: dynamic             # 1.5×ATR trailing stop (volatility-adaptive)
+    atr_period: 14
+    atr_multiplier: 1.5
+    description: "1.5×ATR(14) volatility stop: wider for volatile stocks, tighter for calm ones"
+  rsi_exit_threshold: 70.0    # RSI-2 crossing above 70 indicates mean-reversion completion
+
+sizing:
+  allocation_per_trade_pct: 33.0  # Max 3 concurrent positions (~1/3 pool each)
+  max_concurrent_positions: 3
