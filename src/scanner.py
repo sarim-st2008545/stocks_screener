@@ -212,6 +212,7 @@ def run_daily_scan(refresh: bool = False, min_rr: float = 1.5):
             print(f"  {w['ticker']:<8} {w['segment'][:22]:<24} ${w['price']:>8.2f}  {dist_str:>12}  {rs_str:>16}")
             
     print(f"\n{'=' * 78}\n")
+    return setups, str(data_date)
 
 
 if __name__ == "__main__":

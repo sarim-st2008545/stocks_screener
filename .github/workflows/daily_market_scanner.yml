@@ -1,0 +1,56 @@
+name: Daily Market Open Scanner & Telegram Alerts
+
+on:
+  schedule:
+    # Runs at 13:00 UTC (4:00 PM Qatar Time / 9:00 AM New York ET) Monday through Friday
+    - cron: '0 13 * * 1-5'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  run-scanners:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Wake Up & Trigger Cloud Portal Scan
+        run: |
+          echo "Triggering cloud portal scan at https://aura-quant-k37x.onrender.com..."
+          curl -s -X POST https://aura-quant-k37x.onrender.com/api/scan \
+            -H "Content-Type: application/json" \
+            -d '{"target": "both", "refresh": true, "notify": false}' || true
+
+      - name: Run Scanners & Dispatch Telegram Signals
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN || '8598127712:AAHDz8HNum6QT9G9aA4OOvW050TeWO_0u8Y' }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID || '5847323936' }}
+          PORTAL_URL: 'https://aura-quant-k37x.onrender.com'
+        run: |
+          python -c "
+          from src.galaxy_scanner import run_galaxy_scan
+          from src.scanner import run_daily_scan
+          from src.notifier import notify_scanner_results
+
+          print('Running Galaxy v2 Scan...')
+          galaxy_setups, g_date = run_galaxy_scan(refresh=True)
+
+          print('Running Universe Swing Scan...')
+          universe_setups, u_date = run_daily_scan(refresh=True)
+
+          scan_date = g_date or u_date or 'Today'
+          print(f'Sending Telegram alerts for {len(galaxy_setups)} Galaxy setups and {len(universe_setups)} Universe setups...')
+          notify_scanner_results(galaxy_setups, universe_setups, scan_date=scan_date)
+          "

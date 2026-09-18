@@ -254,6 +254,7 @@ def run_galaxy_scan(refresh: bool = False):
             print(f"  {w['ticker']:<8} {w['segment'][:26]:<28} ${w['price']:>7.2f}  {w['rsi2']:>6.1f}   {bb_str:>7}  {dist_str:>10}")
             
     print(f"\n{'=' * 78}\n")
+    return setups, str(data_date)
 
 
 if __name__ == "__main__":

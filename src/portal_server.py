@@ -296,20 +296,37 @@ class PortalRequestHandler(BaseHTTPRequestHandler):
         elif path == "/api/scan":
             scan_target = payload.get("target", "both")
             refresh = bool(payload.get("refresh", False))
+            notify = bool(payload.get("notify", True))
             results = {"status": "ok", "scanned": scan_target}
+            galaxy_setups, universe_setups = [], []
+            scan_date = None
             try:
                 if scan_target in ("galaxy", "both"):
                     from src.galaxy_scanner import run_galaxy_scan
-                    run_galaxy_scan(refresh=refresh)
+                    galaxy_setups, g_date = run_galaxy_scan(refresh=refresh)
+                    scan_date = g_date
                 if scan_target in ("universe", "both"):
                     from src.scanner import run_daily_scan
-                    run_daily_scan(refresh=refresh)
+                    universe_setups, u_date = run_daily_scan(refresh=refresh)
+                    scan_date = u_date or scan_date
 
                 # Auto-evaluate outcomes across all signals
                 evaluated_count = records.auto_evaluate_all_signals()
                 get_latest_cached_prices(force_refresh=True)
                 results["evaluated_count"] = evaluated_count
-                results["message"] = f"Scanners executed successfully. Evaluated {evaluated_count} signal outcomes."
+                results["galaxy_setups_count"] = len(galaxy_setups)
+                results["universe_setups_count"] = len(universe_setups)
+
+                # Send Telegram Alerts if requested
+                if notify and (galaxy_setups or universe_setups):
+                    try:
+                        from src.notifier import notify_scanner_results
+                        sent_count = notify_scanner_results(galaxy_setups, universe_setups, scan_date=scan_date or "")
+                        results["telegram_alerts_sent"] = sent_count
+                    except Exception as te:
+                        results["telegram_error"] = str(te)
+
+                results["message"] = f"Scanners executed successfully. Found {len(galaxy_setups) + len(universe_setups)} setup(s)."
             except Exception as e:
                 results["warning"] = str(e)
 
