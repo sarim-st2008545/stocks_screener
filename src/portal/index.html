@@ -85,98 +85,94 @@
     }
   </style>
 </head>
-<body class="h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-black overflow-hidden">
+<body class="min-h-screen md:h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-black md:overflow-hidden">
 
   <!-- ================================================================= -->
-  <!-- TOP HEADER (Fixed at top, no vertical scrolling) -->
+  <!-- TOP STICKY BAR: Unified Header + Mobile Tabs (Zero clutter, spacious) -->
   <!-- ================================================================= -->
-  <header class="border-b border-border bg-obsidian/95 backdrop-blur shrink-0 z-40 py-2.5 sm:py-3.5 shadow-xl">
-    <div class="w-full px-4 sm:px-6 lg:px-8">
-      <div class="flex items-center justify-between h-16 sm:h-18 gap-4">
-        
-        <!-- Left Brand & Status -->
-        <div class="flex items-center gap-3.5">
-          <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 p-0.5 shadow-lg shadow-cyan-500/20 flex items-center justify-center">
-            <div class="w-full h-full bg-obsidian rounded-[10px] flex items-center justify-center font-bold text-cyan-400 text-base mono">
-              ⚡
+  <div class="sticky top-0 z-40 shrink-0">
+    
+    <!-- MAIN HEADER -->
+    <header class="border-b border-border bg-obsidian/95 backdrop-blur py-2 sm:py-3.5 shadow-xl">
+      <div class="w-full px-3.5 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-12 sm:h-16 md:h-18 gap-2 sm:gap-4">
+          
+          <!-- Left Brand -->
+          <div class="flex items-center gap-2.5 sm:gap-3.5">
+            <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 p-0.5 shadow-lg shadow-cyan-500/20 flex items-center justify-center shrink-0">
+              <div class="w-full h-full bg-obsidian rounded-[10px] flex items-center justify-center font-bold text-cyan-400 text-sm sm:text-base mono">
+                ⚡
+              </div>
+            </div>
+            <div>
+              <div class="flex items-center gap-1.5 sm:gap-2">
+                <span class="font-extrabold text-sm sm:text-base tracking-wider text-white uppercase">Aura Quant</span>
+                <span class="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/80 font-bold mono">v2.0</span>
+              </div>
+              <div class="hidden sm:flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                <span class="flex items-center gap-1.5 font-medium">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span>SYSTEM LIVE</span>
+                </span>
+                <span class="text-slate-600">•</span>
+                <span class="text-emerald-400 font-medium">☪️ Shariah Compliant (AAOIFI)</span>
+              </div>
             </div>
           </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="font-extrabold text-base tracking-wider text-white uppercase">Aura Quant</span>
-              <span class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/80 font-bold mono">v2.0 PRO</span>
-            </div>
-            <div class="flex items-center gap-2 text-xs text-slate-400 mt-1">
-              <span class="flex items-center gap-1.5 font-medium">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>SYSTEM LIVE</span>
-              </span>
-              <span class="text-slate-600">•</span>
-              <span class="text-emerald-400 font-medium">☪️ Shariah Compliant (AAOIFI)</span>
+
+          <!-- Center: Desktop Navigation Tabs (Hidden on mobile) -->
+          <nav class="hidden md:flex items-center bg-card/90 p-1.5 rounded-2xl border border-border/90 shadow-inner">
+            <button id="tab-signals-btn" onclick="switchTab('signals')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-cyan-600 text-white shadow-md shadow-cyan-900/30 flex items-center gap-2 cursor-pointer">
+              <span>⚡ Setups Stream (Dashboard)</span>
+            </button>
+            <button id="tab-dashboard-btn" onclick="switchTab('dashboard')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-2 cursor-pointer">
+              <span>💼 My Active Trades</span>
+              <span id="nav-active-count" class="px-1.5 py-0.2 rounded-full bg-cyan-950 text-cyan-300 text-[10px] mono font-bold">1</span>
+            </button>
+            <button id="tab-forecast-btn" onclick="switchTab('forecast')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-2 cursor-pointer">
+              <span>📈 Forecast & Analytics</span>
+              <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+            </button>
+            <button id="tab-history-btn" onclick="switchTab('history')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-2 cursor-pointer">
+              <span>📜 Closed History</span>
+            </button>
+          </nav>
+
+          <!-- Right: Mobile quick scan & Floating P&L -->
+          <div class="flex items-center gap-2">
+            <!-- Mobile Scan Button (Compact, in header) -->
+            <button id="mobile-scan-btn" onclick="triggerScanner()" class="md:hidden px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-[11px] font-bold text-white flex items-center gap-1 shadow-md shadow-cyan-900/30 cursor-pointer">
+              <svg id="mobile-scan-icon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <span id="mobile-scan-btn-text">Scan</span>
+            </button>
+
+            <!-- Floating P&L Pill -->
+            <div class="flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-card border border-border text-xs">
+              <span class="text-slate-400 text-[10px] sm:text-xs">P&L:</span>
+              <span id="stat-unrealized-pnl-header" class="font-bold mono text-emerald-400 text-[11px] sm:text-xs">$0.00</span>
             </div>
           </div>
+
         </div>
+      </div>
+    </header>
 
-        <!-- Center: Prominent Navigation Tabs (Signals is Main Dashboard) -->
-        <nav class="hidden md:flex items-center bg-card/90 p-1.5 rounded-2xl border border-border/90 shadow-inner">
-          <button id="tab-signals-btn" onclick="switchTab('signals')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-cyan-600 text-white shadow-md shadow-cyan-900/30 flex items-center gap-2 cursor-pointer">
-            <span>⚡ Setups Stream (Dashboard)</span>
-          </button>
-          <button id="tab-dashboard-btn" onclick="switchTab('dashboard')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-2 cursor-pointer">
-            <span>💼 My Active Trades</span>
-            <span id="nav-active-count" class="px-1.5 py-0.2 rounded-full bg-cyan-950 text-cyan-300 text-[10px] mono font-bold">1</span>
-          </button>
-          <button id="tab-forecast-btn" onclick="switchTab('forecast')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-2 cursor-pointer">
-            <span>📈 Forecast & Analytics</span>
-            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
-          </button>
-          <button id="tab-history-btn" onclick="switchTab('history')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-2 cursor-pointer">
-            <span>📜 Closed History</span>
-          </button>
-        </nav>
-
-        <!-- Right: Status Badge -->
-        <div class="flex items-center gap-2">
-          <div class="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-card border border-border text-xs">
-            <span class="text-slate-400">Floating P&L:</span>
-            <span id="stat-unrealized-pnl-header" class="font-bold mono text-emerald-400">$0.00</span>
-          </div>
-        </div>
-
+    <!-- MOBILE SEGMENTED TAB BAR (Clean, single-line, sticky) -->
+    <div class="md:hidden bg-obsidian/95 backdrop-blur border-b border-border px-2.5 py-1.5">
+      <div class="grid grid-cols-4 gap-1 bg-card/80 p-0.5 rounded-xl border border-border/80 text-center">
+        <button id="mobile-tab-signals-btn" onclick="switchTab('signals')" class="text-xs py-2 rounded-lg text-white bg-cyan-600 font-semibold cursor-pointer shadow-sm">Setups</button>
+        <button id="mobile-tab-dashboard-btn" onclick="switchTab('dashboard')" class="text-xs py-2 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer">Trades (<span id="mobile-nav-active-count">1</span>)</button>
+        <button id="mobile-tab-forecast-btn" onclick="switchTab('forecast')" class="text-xs py-2 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer">Forecast</button>
+        <button id="mobile-tab-history-btn" onclick="switchTab('history')" class="text-xs py-2 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer">History</button>
       </div>
     </div>
-  </header>
 
-  <!-- Mobile Navigation Bar -->
-  <div class="md:hidden bg-card border-b border-border px-3 py-2 flex items-center justify-between gap-1 overflow-x-auto shrink-0 z-30">
-    <button id="mobile-tab-signals-btn" onclick="switchTab('signals')" class="text-xs px-3 py-1.5 rounded-lg text-white bg-cyan-600 font-semibold cursor-pointer whitespace-nowrap shadow-sm">⚡ Setups</button>
-    <button id="mobile-tab-dashboard-btn" onclick="switchTab('dashboard')" class="text-xs px-3 py-1.5 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer whitespace-nowrap">💼 My Trades (<span id="mobile-nav-active-count">1</span>)</button>
-    <button id="mobile-tab-forecast-btn" onclick="switchTab('forecast')" class="text-xs px-3 py-1.5 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer whitespace-nowrap">📈 Forecast</button>
-    <button id="mobile-tab-history-btn" onclick="switchTab('history')" class="text-xs px-3 py-1.5 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer whitespace-nowrap">📜 History</button>
-  </div>
-
-  <!-- Mobile Action Center & Cash Strip -->
-  <div class="md:hidden bg-surface/95 border-b border-border px-3.5 py-2 flex items-center justify-between gap-2 shrink-0 z-30">
-    <div class="flex items-center gap-2">
-      <button id="mobile-scan-btn" onclick="triggerScanner()" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-xs font-bold text-white flex items-center gap-1.5 shadow-md shadow-cyan-900/30 cursor-pointer">
-        <svg id="mobile-scan-icon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-        <span id="mobile-scan-btn-text">Run Scanners</span>
-      </button>
-      <button onclick="openNewTradeModal()" class="px-2.5 py-1.5 rounded-lg bg-card hover:bg-card/80 border border-border text-xs font-semibold text-white flex items-center gap-1 cursor-pointer">
-        <span class="text-cyan-400 font-bold">+</span>
-        <span>Trade</span>
-      </button>
-    </div>
-    <div class="text-right">
-      <div class="text-[9px] text-slate-500 uppercase">Cash Avail</div>
-      <div id="mobile-stat-cash-available" class="text-xs font-bold mono text-cyan-400">$808.00</div>
-    </div>
   </div>
 
   <!-- ================================================================= -->
   <!-- MAIN LAYOUT: FIXED LEFT SIDEBAR (DESKTOP) + SCROLLABLE VIEWPORT -->
   <!-- ================================================================= -->
-  <div class="flex-1 w-full flex flex-col md:flex-row overflow-hidden min-h-0">
+  <div class="flex-1 w-full flex flex-col md:flex-row min-h-0 md:overflow-hidden">
 
     <!-- FIXED LEFT SIDEBAR: Desktop only anchor -->
     <aside class="hidden md:flex md:w-64 lg:w-72 bg-surface/95 border-r border-border p-4 sm:p-5 flex-col justify-between shrink-0 h-full overflow-y-auto space-y-6">
@@ -262,7 +258,7 @@
     </aside>
 
     <!-- RIGHT MAIN CONTENT VIEWPORT -->
-    <main class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto w-full min-w-0">
+    <main class="flex-1 p-3.5 sm:p-6 lg:p-8 w-full min-w-0 md:overflow-y-auto">
 
       <!-- ================================================================= -->
       <!-- TAB 1: SIGNALS & SETUPS STREAM (DEFAULT MAIN DASHBOARD) -->
@@ -330,10 +326,16 @@
               <h2 class="text-xs font-bold text-white uppercase tracking-wider">My Active Trades</h2>
               <span id="active-badge" class="px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/60 text-xs mono font-bold">1 Open</span>
             </div>
-            <button onclick="loadDashboard()" class="text-xs text-slate-400 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-              <span>Refresh Prices</span>
-            </button>
+            <div class="flex items-center gap-2">
+              <button onclick="openNewTradeModal()" class="px-3 py-1.5 rounded-lg bg-card hover:bg-card/80 border border-border text-xs font-semibold text-white flex items-center gap-1 cursor-pointer">
+                <span class="text-cyan-400 font-bold">+</span>
+                <span>New Trade</span>
+              </button>
+              <button onclick="loadDashboard()" class="text-xs text-slate-400 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer p-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                <span class="hidden sm:inline">Refresh Prices</span>
+              </button>
+            </div>
           </div>
 
           <div class="overflow-x-auto">
@@ -711,9 +713,9 @@
         const mBtn = document.getElementById(`mobile-tab-${t}-btn`);
         if (mBtn) {
           if (t === tab) {
-            mBtn.className = 'text-xs px-3 py-1.5 rounded-lg text-white bg-cyan-600 font-semibold cursor-pointer whitespace-nowrap shadow-sm';
+            mBtn.className = 'text-xs py-2 rounded-lg text-white bg-cyan-600 font-semibold cursor-pointer shadow-sm';
           } else {
-            mBtn.className = 'text-xs px-3 py-1.5 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer whitespace-nowrap';
+            mBtn.className = 'text-xs py-2 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer';
           }
         }
       });
