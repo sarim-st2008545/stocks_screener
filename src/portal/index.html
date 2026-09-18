@@ -114,8 +114,6 @@
                   <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                   <span>SYSTEM LIVE</span>
                 </span>
-                <span class="text-slate-600">•</span>
-                <span class="text-emerald-400 font-medium">☪️ Shariah Compliant (AAOIFI)</span>
               </div>
             </div>
           </div>
@@ -138,8 +136,14 @@
             </button>
           </nav>
 
-          <!-- Right: Mobile quick scan & Floating P&L -->
-          <div class="flex items-center gap-2">
+          <!-- Right: Mobile quick scan, Portfolio HUD & Floating P&L -->
+          <div class="flex items-center gap-1.5 sm:gap-2">
+            <!-- Mobile Portfolio HUD Button -->
+            <button onclick="openMobileCapitalModal()" title="View Portfolio Capital & Stats" class="md:hidden px-2 py-1.5 rounded-lg bg-card hover:bg-card/80 border border-border text-xs font-semibold text-slate-300 flex items-center gap-1 transition-all cursor-pointer">
+              <span class="text-cyan-400 font-bold">💼</span>
+              <span class="text-[11px] font-mono text-cyan-400 font-bold" id="mobile-btn-cash-hud">$1K</span>
+            </button>
+
             <!-- Mobile Scan Button (Compact, in header) -->
             <button id="mobile-scan-btn" onclick="triggerScanner()" class="md:hidden px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-[11px] font-bold text-white flex items-center gap-1 shadow-md shadow-cyan-900/30 cursor-pointer">
               <svg id="mobile-scan-icon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
@@ -267,7 +271,6 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3 border-b border-border">
           <div>
             <h2 class="text-sm font-bold text-white uppercase tracking-wider">Trading Setups & Signals Dashboard</h2>
-            <p class="text-xs text-slate-400 mt-0.5">Every scanner setup is automatically preserved by date and tracked for profit/loss — even if not traded.</p>
           </div>
           
           <!-- Two System Buttons (Galaxy & Universe) instead of dropdown -->
@@ -728,6 +731,72 @@
     </div>
   </div>
 
+  <!-- ================================================================= -->
+  <!-- MODAL: MOBILE PORTFOLIO HUD & CAPITAL -->
+  <!-- ================================================================= -->
+  <div id="modal-mobile-capital" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="glass-card rounded-t-3xl sm:rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 border border-border border-b-0 sm:border-b">
+      <div class="flex items-center justify-between border-b border-border pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-base">💼</span>
+          <h3 class="text-sm font-bold text-white uppercase tracking-wider">Portfolio & Performance HUD</h3>
+        </div>
+        <button onclick="closeMobileCapitalModal()" class="text-slate-400 hover:text-white text-xl p-1 cursor-pointer">&times;</button>
+      </div>
+
+      <!-- Capital Overview -->
+      <div class="bg-surface/80 rounded-xl p-3.5 border border-border/80 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Total Account Capital</span>
+          <button onclick="openEditCapitalModal(); closeMobileCapitalModal();" class="text-[11px] font-semibold text-cyan-400 hover:underline cursor-pointer">Edit Capital</button>
+        </div>
+        <div id="mob-hud-total-capital" class="text-2xl font-extrabold mono text-white">$1,000.00</div>
+        
+        <div class="pt-2 border-t border-border/60 grid grid-cols-2 gap-2">
+          <div>
+            <div class="text-[10px] text-slate-400 uppercase">Cash Available</div>
+            <div id="mob-hud-cash-available" class="text-sm font-bold mono text-cyan-400 mt-0.5">$808.00</div>
+          </div>
+          <div class="text-right">
+            <div class="text-[10px] text-slate-400 uppercase">Deployed</div>
+            <div id="mob-hud-deployed-capital" class="text-sm font-bold mono text-slate-300 mt-0.5">$192.00</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Performance Metrics Grid -->
+      <div class="grid grid-cols-2 gap-2.5">
+        <div class="bg-surface/80 rounded-xl p-3 border border-border/80">
+          <div class="text-[10px] text-slate-400 uppercase">Floating P&L</div>
+          <div id="mob-hud-unrealized-pnl" class="text-sm font-bold mono text-emerald-400 mt-0.5">$0.00</div>
+        </div>
+        <div class="bg-surface/80 rounded-xl p-3 border border-border/80">
+          <div class="text-[10px] text-slate-400 uppercase">Realized P&L</div>
+          <div id="mob-hud-realized-pnl" class="text-sm font-bold mono text-slate-300 mt-0.5">$0.00</div>
+        </div>
+        <div class="bg-surface/80 rounded-xl p-3 border border-border/80">
+          <div class="text-[10px] text-slate-400 uppercase">Win Rate</div>
+          <div id="mob-hud-win-rate" class="text-sm font-bold mono text-slate-300 mt-0.5">0.0%</div>
+        </div>
+        <div class="bg-surface/80 rounded-xl p-3 border border-border/80">
+          <div class="text-[10px] text-slate-400 uppercase">Active Positions</div>
+          <div id="mob-hud-active-count" class="text-sm font-bold mono text-cyan-400 mt-0.5">0</div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="pt-2 flex gap-2">
+        <button onclick="openNewTradeModal(); closeMobileCapitalModal();" class="flex-1 py-2.5 rounded-xl bg-card hover:bg-card/70 border border-border text-xs font-bold text-white flex items-center justify-center gap-1.5 cursor-pointer">
+          <span class="text-cyan-400 font-bold">+</span>
+          <span>Log Position</span>
+        </button>
+        <button onclick="closeMobileCapitalModal()" class="flex-1 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-xs font-bold text-white cursor-pointer">
+          Done
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- JAVASCRIPT LOGIC -->
   <script>
     let currentTab = 'signals'; // Signals is the main dashboard landing page
@@ -853,6 +922,39 @@
 
       const mobActiveEl = document.getElementById('mobile-nav-active-count');
       if (mobActiveEl) mobActiveEl.textContent = active.length;
+
+      // Mobile HUD Modal & Button Values
+      const mobBtnHud = document.getElementById('mobile-btn-cash-hud');
+      if (mobBtnHud) {
+        mobBtnHud.textContent = `$${(port.cash_available >= 1000 ? (port.cash_available / 1000).toFixed(1) + 'k' : port.cash_available.toFixed(0))}`;
+      }
+
+      const mobHudTotal = document.getElementById('mob-hud-total-capital');
+      if (mobHudTotal) mobHudTotal.textContent = `$${port.total_capital.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+
+      const mobHudCash = document.getElementById('mob-hud-cash-available');
+      if (mobHudCash) mobHudCash.textContent = `$${port.cash_available.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+
+      const mobHudDep = document.getElementById('mob-hud-deployed-capital');
+      if (mobHudDep) mobHudDep.textContent = `$${port.deployed_capital.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+
+      const mobHudUnPnl = document.getElementById('mob-hud-unrealized-pnl');
+      if (mobHudUnPnl) {
+        mobHudUnPnl.textContent = pnlStr;
+        mobHudUnPnl.className = `text-sm font-bold mono mt-0.5 ${unPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      }
+
+      const mobHudRealPnl = document.getElementById('mob-hud-realized-pnl');
+      if (mobHudRealPnl) {
+        mobHudRealPnl.textContent = `${port.realized_pnl >= 0 ? '+' : ''}$${port.realized_pnl.toFixed(2)}`;
+        mobHudRealPnl.className = `text-sm font-bold mono mt-0.5 ${port.realized_pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      }
+
+      const mobHudWr = document.getElementById('mob-hud-win-rate');
+      if (mobHudWr) mobHudWr.textContent = `${port.win_rate.toFixed(1)}%`;
+
+      const mobHudActive = document.getElementById('mob-hud-active-count');
+      if (mobHudActive) mobHudActive.textContent = active.length;
 
       // Dashboard View KPI Cards
       const cardActiveCount = document.getElementById('stat-active-count');
@@ -1287,12 +1389,21 @@
 
     // Capital Modal
     function openEditCapitalModal() {
-      document.getElementById('input-capital').value = cachedPortfolio.total_capital || 1000;
+      document.getElementById('input-capital').value = (cachedPortfolio && cachedPortfolio.total_capital) ? cachedPortfolio.total_capital : 1000;
       document.getElementById('modal-capital').classList.remove('hidden');
     }
     function closeEditCapitalModal() {
       document.getElementById('modal-capital').classList.add('hidden');
     }
+
+    // Mobile Portfolio HUD Modal
+    function openMobileCapitalModal() {
+      document.getElementById('modal-mobile-capital').classList.remove('hidden');
+    }
+    function closeMobileCapitalModal() {
+      document.getElementById('modal-mobile-capital').classList.add('hidden');
+    }
+
     async function saveCapital() {
       const val = parseFloat(document.getElementById('input-capital').value);
       if (isNaN(val) || val <= 0) return alert('Please enter a valid amount');
