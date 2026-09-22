@@ -177,10 +177,12 @@ def run_galaxy_scan(refresh: bool = False):
         stop_pct = (cur_c - stop_price) / cur_c * 100.0
         target_price = sma10                      # 10-SMA dynamic target
         target_pct = (target_price - cur_c) / cur_c * 100.0
-        
+        rr_ratio = (target_pct / stop_pct) if stop_pct > 0 else 0.0
+
         meta = ticker_info.get(sym, {})
-        
-        if trend_ok and is_oversold and bb_penetration and spy_ok:
+
+        # Only accept setups with positive expected value (Target >= 1.5x Stop Risk)
+        if trend_ok and is_oversold and bb_penetration and spy_ok and (rr_ratio >= 1.5):
             setups.append({
                 "ticker": sym,
                 "name": meta.get("name", sym),
@@ -197,6 +199,7 @@ def run_galaxy_scan(refresh: bool = False):
                 "stop_pct": stop_pct,
                 "target": target_price,
                 "target_pct": target_pct,
+                "rr": rr_ratio,
                 "atr": atr14
             })
         elif trend_ok and (rsi2 < 20.0):

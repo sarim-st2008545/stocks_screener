@@ -667,7 +667,7 @@ def get_portfolio_summary(
 ) -> dict[str, Any]:
     """Calculates overall portfolio status, capital allocation, realized and unrealized P&L."""
     init_db(db_path)
-    total_capital = float(get_setting("total_capital", "10000.0", db_path=db_path))
+    total_capital = float(get_setting("total_capital", "1000.0", db_path=db_path))
     active = get_active_trades(latest_prices=latest_prices, db_path=db_path)
     closed = get_closed_trades(db_path=db_path)
 

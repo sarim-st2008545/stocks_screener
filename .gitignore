@@ -10,11 +10,13 @@ __pycache__/
 .ruff_cache/
 
 # Data: regenerable from SEC/market sources, and large
-data/
+data/prices/
+data/galaxy/
+data/active_cash/
+data/prices_10y/
+data/*
 !data/.gitkeep
 !data/records.db
-!data/galaxy/
-!data/prices/
 
 # Virtualenvs
 .venv/

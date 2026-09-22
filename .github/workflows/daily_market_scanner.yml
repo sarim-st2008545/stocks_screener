@@ -2,7 +2,12 @@ name: Daily Market Open Scanner & Telegram Alerts
 
 on:
   schedule:
-    # Runs at 13:00 UTC (4:00 PM Qatar Time / 9:00 AM New York ET) Monday through Friday
+    # 1. Post-Market Close: 20:30 UTC (11:30 PM Qatar / 4:30 PM NY) Monday-Friday
+    #    When the trading day has finished and all daily candles are 100% complete.
+    - cron: '30 20 * * 1-5'
+
+    # 2. Pre-Market Open: 13:00 UTC (4:00 PM Qatar / 9:00 AM NY) Monday-Friday
+    #    30 mins before opening bell for final morning briefing and entry levels.
     - cron: '0 13 * * 1-5'
   workflow_dispatch: # Allows manual trigger from GitHub Actions tab
 
