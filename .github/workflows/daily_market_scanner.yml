@@ -59,3 +59,10 @@ jobs:
           print(f'Sending Telegram alerts for {len(galaxy_setups)} Galaxy setups and {len(universe_setups)} Universe setups...')
           notify_scanner_results(galaxy_setups, universe_setups, scan_date=scan_date)
           "
+
+      - name: Commit & Sync Updated Database to Repository
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/records.db data/prices/ data/galaxy/ || true
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore(cron): sync scanner records and prices [skip ci]" && git push)
