@@ -13,13 +13,23 @@ import os
 import requests
 from typing import Any, Optional
 from pathlib import Path
-from dotenv import load_dotenv
 
-# Load environment variables from .env
-load_dotenv()
+# Load environment variables from .env if python-dotenv is installed, or parse manually
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    env_file = Path(__file__).parent.parent / ".env"
+    if env_file.exists():
+        with open(env_file, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    os.environ[k.strip()] = v.strip().strip("'\"")
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8598127712:AAHDz8HNum6QT9G9aA4OOvW050TeWO_0u8Y")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "5847323936")
 PORTAL_URL = os.getenv("PORTAL_URL", "https://aura-quant-k37x.onrender.com").rstrip("/")
 
 

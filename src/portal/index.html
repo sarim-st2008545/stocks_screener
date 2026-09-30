@@ -274,17 +274,30 @@
             <p class="text-xs text-slate-400 mt-0.5">Real-time status and live profit/loss for all generated setups, tracking theoretical performance.</p>
           </div>
           
-          <!-- Two System Buttons (Galaxy & Universe) instead of dropdown -->
-          <div class="flex items-center gap-1.5 bg-card p-1 rounded-xl border border-border">
-            <button id="sig-filter-all-btn" onclick="setSignalFilter('')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-cyan-600 text-white shadow cursor-pointer">
-              All Setups
-            </button>
-            <button id="sig-filter-galaxy-btn" onclick="setSignalFilter('galaxy')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 cursor-pointer">
-              ⚡ Galaxy v2 (Halal Scalp)
-            </button>
-            <button id="sig-filter-universe-btn" onclick="setSignalFilter('universe')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 cursor-pointer">
-              🚀 Universe (AI Swing)
-            </button>
+          <div class="flex flex-wrap items-center gap-2.5">
+            <!-- PnL Metric Toggle Tabs (Percentage vs Dollar Raised/Lost) -->
+            <div class="flex items-center gap-1 bg-surface p-1 rounded-xl border border-border">
+              <span class="text-[10px] text-slate-500 font-bold uppercase px-2 mono">P&L View:</span>
+              <button id="pnl-view-pct-btn" onclick="setPnlView('percent')" class="px-3 py-1 rounded-lg text-xs font-bold transition-all bg-cyan-600 text-white shadow cursor-pointer">
+                % Return
+              </button>
+              <button id="pnl-view-dollar-btn" onclick="setPnlView('dollar')" class="px-3 py-1 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 cursor-pointer">
+                $ P&L
+              </button>
+            </div>
+
+            <!-- Two System Buttons (Galaxy & Universe) -->
+            <div class="flex items-center gap-1.5 bg-card p-1 rounded-xl border border-border">
+              <button id="sig-filter-all-btn" onclick="setSignalFilter('')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-cyan-600 text-white shadow cursor-pointer">
+                All Setups
+              </button>
+              <button id="sig-filter-galaxy-btn" onclick="setSignalFilter('galaxy')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 cursor-pointer">
+                ⚡ Galaxy v2 (Halal Scalp)
+              </button>
+              <button id="sig-filter-universe-btn" onclick="setSignalFilter('universe')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 cursor-pointer">
+                🚀 Universe (AI Swing)
+              </button>
+            </div>
           </div>
         </div>
 
@@ -807,6 +820,26 @@
     let cachedForecastData = null;
     let cachedHistoryData = null;
     let currentSignalFilter = '';
+    let currentPnlView = 'percent'; // 'percent' or 'dollar'
+
+    function setPnlView(mode) {
+      currentPnlView = mode;
+      const pctBtn = document.getElementById('pnl-view-pct-btn');
+      const dolBtn = document.getElementById('pnl-view-dollar-btn');
+      if (pctBtn && dolBtn) {
+        if (mode === 'percent') {
+          pctBtn.className = 'px-3 py-1 rounded-lg text-xs font-bold transition-all bg-cyan-600 text-white shadow cursor-pointer';
+          dolBtn.className = 'px-3 py-1 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 cursor-pointer';
+        } else {
+          pctBtn.className = 'px-3 py-1 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 cursor-pointer';
+          dolBtn.className = 'px-3 py-1 rounded-lg text-xs font-bold transition-all bg-emerald-600 text-white shadow cursor-pointer';
+        }
+      }
+      const cacheKey = currentSignalFilter || 'all';
+      if (cachedSignalsData[cacheKey]) {
+        renderSignalsFeed(cachedSignalsData[cacheKey]);
+      }
+    }
 
     window.addEventListener('DOMContentLoaded', () => {
       switchTab('forecast');
@@ -1129,8 +1162,8 @@
                     <th class="py-3 px-3">Live Price</th>
                     <th class="py-3 px-3">Stop / Target</th>
                     <th class="py-3 px-3 w-40">Target Progress</th>
-                    <th class="py-3 px-3">Performance (P&L)</th>
-                    <th class="py-3 px-3">Status</th>
+                    <th class="py-3 px-3">Raised / Lost (%)</th>
+                    <th class="py-3 px-3">Raised / Lost ($)</th>
                     <th class="py-3 px-5 text-right">Action</th>
                   </tr>
                 </thead>
@@ -1150,18 +1183,6 @@
         ? '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-cyan-950 text-cyan-400 border border-cyan-800/80 mono">GALAXY v2</span>'
         : '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-purple-950 text-purple-400 border border-purple-800/80 mono">UNIVERSE</span>';
 
-      let statusBadge = '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-300 border border-slate-700">⏳ PENDING</span>';
-      if (s.status === 'HIT_TARGET' || s.status === 'WON') {
-        statusBadge = `<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800/80">🎯 TARGET HIT (+${(s.outcome_pnl_pct || s.target_pct || 0).toFixed(1)}%)</span>`;
-      } else if (s.status === 'HIT_STOP' || s.status === 'LOST') {
-        statusBadge = `<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-rose-950 text-rose-400 border border-rose-800/80">🛑 STOPPED (-${Math.abs(s.outcome_pnl_pct || s.stop_pct || 0).toFixed(1)}%)</span>`;
-      } else if (s.status === 'IN_PLAY' || s.status === 'ACTIVE') {
-        const liveSign = (s.outcome_pnl_pct || 0) >= 0 ? '+' : '';
-        statusBadge = `<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-blue-950 text-blue-300 border border-blue-800/80">🟢 IN PLAY (${liveSign}${(s.outcome_pnl_pct || 0).toFixed(1)}%)</span>`;
-      } else if (s.status === 'EXPIRED') {
-        statusBadge = '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-950 text-amber-400 border border-amber-800/80">🟡 EXPIRED</span>';
-      }
-
       const pnlPct = s.outcome_pnl_pct !== null && s.outcome_pnl_pct !== undefined ? Number(s.outcome_pnl_pct) : 0.0;
       const isPositive = pnlPct >= 0;
       const pnlColor = isPositive ? 'text-emerald-400' : 'text-rose-400';
@@ -1172,6 +1193,22 @@
 
       const currPrice = s.current_price || s.price;
       const progress = s.progress_pct !== undefined ? s.progress_pct : 50;
+
+      // Status pill
+      let statusTag = '';
+      if (s.status === 'HIT_TARGET' || s.status === 'WON') {
+        statusTag = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 font-mono">TARGET HIT</span>';
+      } else if (s.status === 'HIT_STOP' || s.status === 'LOST') {
+        statusTag = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-rose-950/80 text-rose-400 border border-rose-800/60 font-mono">STOPPED</span>';
+      } else if (s.status === 'IN_PLAY' || s.status === 'ACTIVE') {
+        statusTag = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-blue-950/80 text-blue-300 border border-blue-800/60 font-mono">IN PLAY</span>';
+      } else if (s.status === 'EXPIRED') {
+        statusTag = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-400 border border-amber-800/60 font-mono">EXPIRED</span>';
+      }
+
+      // Highlight according to current active toggle
+      const pctHighlight = currentPnlView === 'percent' ? 'font-extrabold text-sm' : 'font-bold text-xs opacity-75';
+      const dolHighlight = currentPnlView === 'dollar' ? 'font-extrabold text-sm' : 'font-bold text-xs opacity-75';
 
       return `
         <tr class="hover:bg-surface/60 transition-colors">
@@ -1208,12 +1245,15 @@
               <div class="range-thumb" style="left: ${progress}%"></div>
             </div>
           </td>
+          <!-- PERCENTAGE P&L COLUMN -->
           <td class="py-3 px-3 mono">
-            <div class="${pnlColor} font-bold text-xs">${pnlSign}${pnlPct.toFixed(2)}%</div>
-            <div class="text-[10px] text-slate-400">${pnlDollarSign}$${Number(pnlDollar).toFixed(2)}</div>
+            <div class="${pnlColor} ${pctHighlight}">${pnlSign}${pnlPct.toFixed(2)}%</div>
+            <div class="mt-0.5">${statusTag}</div>
           </td>
-          <td class="py-3 px-3">
-            ${statusBadge}
+          <!-- DOLLAR P&L COLUMN -->
+          <td class="py-3 px-3 mono">
+            <div class="${pnlColor} ${dolHighlight}">${pnlDollarSign}$${Number(pnlDollar).toFixed(2)}</div>
+            <div class="text-[10px] text-slate-500">Based on standard sizing</div>
           </td>
           <td class="py-3 px-5 text-right">
             <button onclick="tradeSignal(${JSON.stringify(s).replace(/"/g, '&quot;')})" class="px-2.5 py-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white border border-cyan-700/60 text-[11px] font-bold transition-all inline-flex items-center gap-1 shadow cursor-pointer">
@@ -1659,7 +1699,7 @@
         const res = await fetch('/api/scan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ target: 'both', refresh: false })
+          body: JSON.stringify({ target: 'both', refresh: true, notify: true })
         });
         const data = await res.json();
         
