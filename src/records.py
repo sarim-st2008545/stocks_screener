@@ -419,7 +419,19 @@ def get_signals_grouped_by_date(
 
     cur.execute(query, params)
     rows = cur.fetchall()
+
+    # Query trades to detect which setups have been executed by the user
+    cur.execute("SELECT id, signal_id, ticker, system, shares, entry_price, status, entry_date FROM trades")
+    trade_rows = [dict(tr) for tr in cur.fetchall()]
     conn.close()
+
+    traded_by_sig_id: dict[int, dict[str, Any]] = {}
+    traded_by_ticker_date: dict[tuple[str, str], dict[str, Any]] = {}
+    for tr in trade_rows:
+        if tr.get("signal_id"):
+            traded_by_sig_id[tr["signal_id"]] = tr
+        k = (tr["ticker"].upper(), str(tr["entry_date"])[:10])
+        traded_by_ticker_date[k] = tr
 
     total_cap = float(get_setting("total_capital", "10000.0", db_path=db_path))
 
@@ -436,6 +448,21 @@ def get_signals_grouped_by_date(
                 pass
 
         ticker = item["ticker"].upper()
+        sig_id = item.get("id")
+
+        # Mark if this specific signal was traded
+        trade_match = traded_by_sig_id.get(sig_id)
+        if not trade_match:
+            trade_match = traded_by_ticker_date.get((ticker, d_str))
+
+        if trade_match:
+            item["is_traded"] = True
+            item["trade_id"] = trade_match["id"]
+            item["trade_status"] = trade_match["status"]
+            item["trade_shares"] = trade_match["shares"]
+            item["trade_entry_price"] = trade_match["entry_price"]
+        else:
+            item["is_traded"] = False
         entry_p = float(item["price"] or 0.0)
         target_p = float(item["target_price"] or 0.0)
         stop_p = float(item["stop_loss"] or 0.0)

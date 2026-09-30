@@ -1251,12 +1251,58 @@
       const pctHighlight = currentPnlView === 'percent' ? 'font-extrabold text-sm' : 'font-bold text-xs opacity-75';
       const dolHighlight = currentPnlView === 'dollar' ? 'font-extrabold text-sm' : 'font-bold text-xs opacity-75';
 
+      const isTraded = !!s.is_traded;
+      const isTradedOpen = isTraded && (s.trade_status === 'OPEN' || !s.trade_status);
+      const isTradedClosed = isTraded && s.trade_status === 'CLOSED';
+
+      let rowClass = "hover:bg-surface/60 transition-colors";
+      let tradedBadge = '';
+      if (isTradedOpen) {
+        rowClass = "bg-emerald-950/25 border-l-4 border-l-emerald-400 hover:bg-emerald-950/40 transition-colors shadow-inner";
+        tradedBadge = `<span class="px-2 py-0.5 rounded text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 mono tracking-wider">✓ IN PORTFOLIO (${s.trade_shares || 1} sh)</span>`;
+      } else if (isTradedClosed) {
+        rowClass = "bg-slate-900/40 border-l-4 border-l-slate-600 hover:bg-slate-900/60 opacity-80 transition-colors";
+        tradedBadge = `<span class="px-2 py-0.5 rounded text-[9px] font-extrabold bg-slate-800 text-slate-300 border border-slate-700 mono tracking-wider">✓ CLOSED (${s.trade_shares || 1} sh)</span>`;
+      }
+
+      let actionHtml = '';
+      if (isTradedOpen) {
+        actionHtml = `
+          <div class="flex items-center justify-end gap-1.5">
+            <span class="px-2.5 py-1.5 rounded-lg bg-emerald-950/90 text-emerald-300 border border-emerald-700/80 text-[11px] font-bold inline-flex items-center gap-1 shadow">
+              ✓ Active (${s.trade_shares || 1} sh)
+            </span>
+            <button onclick="tradeSignal(${JSON.stringify(s).replace(/"/g, '&quot;')})" title="Add to position or re-log" class="px-2 py-1.5 rounded-lg bg-surface hover:bg-card text-slate-400 hover:text-white border border-border text-[11px] font-bold cursor-pointer transition-all">
+              +
+            </button>
+          </div>
+        `;
+      } else if (isTradedClosed) {
+        actionHtml = `
+          <div class="flex items-center justify-end gap-1.5">
+            <span class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 text-slate-400 border border-slate-700 text-[11px] font-semibold inline-flex items-center gap-1">
+              ✓ Realized
+            </span>
+            <button onclick="tradeSignal(${JSON.stringify(s).replace(/"/g, '&quot;')})" title="Trade setup again" class="px-2 py-1.5 rounded-lg bg-surface hover:bg-card text-slate-400 hover:text-white border border-border text-[11px] font-bold cursor-pointer transition-all">
+              +
+            </button>
+          </div>
+        `;
+      } else {
+        actionHtml = `
+          <button onclick="tradeSignal(${JSON.stringify(s).replace(/"/g, '&quot;')})" class="px-2.5 py-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white border border-cyan-700/60 text-[11px] font-bold transition-all inline-flex items-center gap-1 shadow cursor-pointer">
+            <span>+ Take Trade</span>
+          </button>
+        `;
+      }
+
       return `
-        <tr class="hover:bg-surface/60 transition-colors">
+        <tr class="${rowClass}">
           <td class="py-3 px-5">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
               <span class="font-extrabold text-white mono text-sm">${s.ticker}</span>
               ${badge}
+              ${tradedBadge}
             </div>
             <div class="text-[10px] text-slate-400 truncate max-w-[130px]">${s.name || s.ticker}</div>
           </td>
@@ -1302,9 +1348,7 @@
             <div class="text-[10px] text-slate-500 font-medium">1 share</div>
           </td>
           <td class="py-3 px-5 text-right">
-            <button onclick="tradeSignal(${JSON.stringify(s).replace(/"/g, '&quot;')})" class="px-2.5 py-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white border border-cyan-700/60 text-[11px] font-bold transition-all inline-flex items-center gap-1 shadow cursor-pointer">
-              <span>+ Take Trade</span>
-            </button>
+            ${actionHtml}
           </td>
         </tr>
       `;
@@ -1629,8 +1673,8 @@
       document.getElementById('trade-signal-id').value = s.id || '';
       document.getElementById('trade-ticker').value = s.ticker;
       document.getElementById('trade-system').value = s.system || 'universe';
-      const p = s.current_price !== undefined ? Number(s.current_price) : Number(s.price);
-      document.getElementById('trade-price').value = p.toFixed(2);
+      // Pre-fill Entry Price with the exact setup Trigger Price
+      document.getElementById('trade-price').value = Number(s.price).toFixed(2);
       document.getElementById('trade-shares').value = '1';
       document.getElementById('trade-stop').value = Number(s.stop_loss).toFixed(2);
       document.getElementById('trade-target').value = Number(s.target_price).toFixed(2);
@@ -1667,6 +1711,8 @@
       const data = await res.json();
       if (data.status === 'ok') {
         closeNewTradeModal();
+        cachedSignalsData = {}; // Clear signals cache so setups stream updates row highlight
+        loadSignals();
         loadDashboard();
         loadForecast();
         switchTab('forecast');
@@ -1710,6 +1756,8 @@
       const data = await res.json();
       if (data.status === 'ok') {
         closeExitModal();
+        cachedSignalsData = {};
+        loadSignals();
         loadDashboard();
         loadHistory();
         loadForecast();
