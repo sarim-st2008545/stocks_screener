@@ -120,16 +120,16 @@
 
           <!-- Center: Desktop Navigation Tabs (Hidden on mobile) -->
           <nav class="hidden md:flex items-center bg-card/90 p-1.5 rounded-2xl border border-border/90 shadow-inner">
-            <button id="tab-signals-btn" onclick="switchTab('signals')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-cyan-600 text-white shadow-md shadow-cyan-900/30 flex items-center gap-2 cursor-pointer">
-              <span>⚡ Setups Stream (Dashboard)</span>
+            <button id="tab-forecast-btn" onclick="switchTab('forecast')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-cyan-600 text-white shadow-md shadow-cyan-900/30 flex items-center gap-2 cursor-pointer">
+              <span>📈 Forecast & Analytics (Dashboard)</span>
+              <span class="w-1.5 h-1.5 rounded-full bg-cyan-300"></span>
+            </button>
+            <button id="tab-signals-btn" onclick="switchTab('signals')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-2 cursor-pointer">
+              <span>⚡ Setups Stream</span>
             </button>
             <button id="tab-dashboard-btn" onclick="switchTab('dashboard')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-2 cursor-pointer">
               <span>💼 My Active Trades</span>
               <span id="nav-active-count" class="px-1.5 py-0.2 rounded-full bg-cyan-950 text-cyan-300 text-[10px] mono font-bold">1</span>
-            </button>
-            <button id="tab-forecast-btn" onclick="switchTab('forecast')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-2 cursor-pointer">
-              <span>📈 Forecast & Analytics</span>
-              <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
             </button>
             <button id="tab-history-btn" onclick="switchTab('history')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-2 cursor-pointer">
               <span>📜 Closed History</span>
@@ -164,9 +164,9 @@
     <!-- MOBILE SEGMENTED TAB BAR (Clean, single-line, sticky) -->
     <div class="md:hidden bg-obsidian/95 backdrop-blur border-b border-border px-2.5 py-1.5">
       <div class="grid grid-cols-4 gap-1 bg-card/80 p-0.5 rounded-xl border border-border/80 text-center">
-        <button id="mobile-tab-signals-btn" onclick="switchTab('signals')" class="text-xs py-2 rounded-lg text-white bg-cyan-600 font-semibold cursor-pointer shadow-sm">Setups</button>
+        <button id="mobile-tab-forecast-btn" onclick="switchTab('forecast')" class="text-xs py-2 rounded-lg text-white bg-cyan-600 font-semibold cursor-pointer shadow-sm">Stats & Forecast</button>
+        <button id="mobile-tab-signals-btn" onclick="switchTab('signals')" class="text-xs py-2 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer">Setups</button>
         <button id="mobile-tab-dashboard-btn" onclick="switchTab('dashboard')" class="text-xs py-2 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer">Trades (<span id="mobile-nav-active-count">1</span>)</button>
-        <button id="mobile-tab-forecast-btn" onclick="switchTab('forecast')" class="text-xs py-2 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer">Forecast</button>
         <button id="mobile-tab-history-btn" onclick="switchTab('history')" class="text-xs py-2 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer">History</button>
       </div>
     </div>
@@ -265,12 +265,13 @@
     <main class="flex-1 p-3.5 sm:p-6 lg:p-8 w-full min-w-0 md:overflow-y-auto">
 
       <!-- ================================================================= -->
-      <!-- TAB 1: SIGNALS & SETUPS STREAM (DEFAULT MAIN DASHBOARD) -->
+      <!-- TAB: SIGNALS & SETUPS STREAM -->
       <!-- ================================================================= -->
-      <section id="view-signals" class="space-y-6">
+      <section id="view-signals" class="hidden space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3 border-b border-border">
           <div>
-            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Trading Setups & Signals Dashboard</h2>
+            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Live Setups Stream & Performance Tracker</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Real-time status and live profit/loss for all generated setups, tracking theoretical performance.</p>
           </div>
           
           <!-- Two System Buttons (Galaxy & Universe) instead of dropdown -->
@@ -365,9 +366,9 @@
       </section>
 
       <!-- ================================================================= -->
-      <!-- TAB 3: FORECAST & ANALYTICS -->
+      <!-- TAB 1: FORECAST & ANALYTICS (DEFAULT MAIN DASHBOARD) -->
       <!-- ================================================================= -->
-      <section id="view-forecast" class="hidden space-y-8">
+      <section id="view-forecast" class="space-y-8">
         
         <!-- Top Title & Overview -->
         <div>
@@ -799,7 +800,7 @@
 
   <!-- JAVASCRIPT LOGIC -->
   <script>
-    let currentTab = 'signals'; // Signals is the main dashboard landing page
+    let currentTab = 'forecast'; // Forecast & Analytics is the main landing dashboard
     let cachedPortfolio = null;
     let cachedActiveTrades = null;
     let cachedSignalsData = {}; // keyed by system filter: 'all', 'galaxy', 'universe'
@@ -808,18 +809,19 @@
     let currentSignalFilter = '';
 
     window.addEventListener('DOMContentLoaded', () => {
-      switchTab('signals');
+      switchTab('forecast');
       loadDashboard();
       setInterval(() => {
         if (currentTab === 'dashboard') loadDashboard(false);
+        if (currentTab === 'signals') loadSignals();
       }, 15000);
     });
 
     function switchTab(tab) {
       currentTab = tab;
+      document.getElementById('view-forecast').classList.toggle('hidden', tab !== 'forecast');
       document.getElementById('view-signals').classList.toggle('hidden', tab !== 'signals');
       document.getElementById('view-dashboard').classList.toggle('hidden', tab !== 'dashboard');
-      document.getElementById('view-forecast').classList.toggle('hidden', tab !== 'forecast');
       document.getElementById('view-history').classList.toggle('hidden', tab !== 'history');
 
       const tabs = ['signals', 'dashboard', 'forecast', 'history'];
@@ -1106,28 +1108,127 @@
       feed.innerHTML = dates.map(dateStr => {
         const list = grouped[dateStr];
         return `
-          <div class="space-y-4">
-            <div class="flex items-center gap-3">
-              <span class="px-3.5 py-1 rounded-xl bg-card border border-border text-xs font-bold mono text-cyan-400 flex items-center gap-1.5 shadow">
-                📅 ${dateStr}
-              </span>
-              <span class="text-xs text-slate-400 font-medium">${list.length} setup(s) generated</span>
-              <div class="flex-1 h-px bg-border"></div>
+          <div class="glass-card rounded-xl overflow-hidden shadow-xl space-y-2">
+            <div class="px-5 py-3.5 border-b border-border bg-card/50 flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-3">
+                <span class="px-3 py-1 rounded-lg bg-surface border border-border text-xs font-bold mono text-cyan-400 flex items-center gap-1.5 shadow-sm">
+                  📅 ${dateStr}
+                </span>
+                <span class="text-xs text-slate-400 font-medium">${list.length} setup(s) generated</span>
+              </div>
+              <div class="text-[11px] text-slate-500 mono">Tracking all setups live regardless of execution</div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              ${list.map(s => renderSignalCard(s)).join('')}
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="border-b border-border/80 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-card/20">
+                    <th class="py-3 px-5">Ticker / System</th>
+                    <th class="py-3 px-3">Setup Trigger</th>
+                    <th class="py-3 px-3">Trigger Price</th>
+                    <th class="py-3 px-3">Live Price</th>
+                    <th class="py-3 px-3">Stop / Target</th>
+                    <th class="py-3 px-3 w-40">Target Progress</th>
+                    <th class="py-3 px-3">Performance (P&L)</th>
+                    <th class="py-3 px-3">Status</th>
+                    <th class="py-3 px-5 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border/60 text-xs">
+                  ${list.map(s => renderSignalRow(s)).join('')}
+                </tbody>
+              </table>
             </div>
           </div>
         `;
       }).join('');
     }
 
+    function renderSignalRow(s) {
+      const isGalaxy = s.system === 'galaxy';
+      const badge = isGalaxy 
+        ? '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-cyan-950 text-cyan-400 border border-cyan-800/80 mono">GALAXY v2</span>'
+        : '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-purple-950 text-purple-400 border border-purple-800/80 mono">UNIVERSE</span>';
+
+      let statusBadge = '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-300 border border-slate-700">⏳ PENDING</span>';
+      if (s.status === 'HIT_TARGET' || s.status === 'WON') {
+        statusBadge = `<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800/80">🎯 TARGET HIT (+${(s.outcome_pnl_pct || s.target_pct || 0).toFixed(1)}%)</span>`;
+      } else if (s.status === 'HIT_STOP' || s.status === 'LOST') {
+        statusBadge = `<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-rose-950 text-rose-400 border border-rose-800/80">🛑 STOPPED (-${Math.abs(s.outcome_pnl_pct || s.stop_pct || 0).toFixed(1)}%)</span>`;
+      } else if (s.status === 'IN_PLAY' || s.status === 'ACTIVE') {
+        const liveSign = (s.outcome_pnl_pct || 0) >= 0 ? '+' : '';
+        statusBadge = `<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-blue-950 text-blue-300 border border-blue-800/80">🟢 IN PLAY (${liveSign}${(s.outcome_pnl_pct || 0).toFixed(1)}%)</span>`;
+      } else if (s.status === 'EXPIRED') {
+        statusBadge = '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-950 text-amber-400 border border-amber-800/80">🟡 EXPIRED</span>';
+      }
+
+      const pnlPct = s.outcome_pnl_pct !== null && s.outcome_pnl_pct !== undefined ? Number(s.outcome_pnl_pct) : 0.0;
+      const isPositive = pnlPct >= 0;
+      const pnlColor = isPositive ? 'text-emerald-400' : 'text-rose-400';
+      const pnlSign = isPositive ? '+' : '';
+
+      const pnlDollar = s.hypothetical_pnl_dollar || 0;
+      const pnlDollarSign = pnlDollar >= 0 ? '+' : '';
+
+      const currPrice = s.current_price || s.price;
+      const progress = s.progress_pct !== undefined ? s.progress_pct : 50;
+
+      return `
+        <tr class="hover:bg-surface/60 transition-colors">
+          <td class="py-3 px-5">
+            <div class="flex items-center gap-2">
+              <span class="font-extrabold text-white mono text-sm">${s.ticker}</span>
+              ${badge}
+            </div>
+            <div class="text-[10px] text-slate-400 truncate max-w-[130px]">${s.name || s.ticker}</div>
+          </td>
+          <td class="py-3 px-3">
+            <div class="text-slate-200 font-semibold text-[11px]">${s.signal_type}</div>
+            <div class="text-[10px] text-slate-500">${s.segment || 'Core'}</div>
+          </td>
+          <td class="py-3 px-3 mono text-white font-bold">
+            $${Number(s.price).toFixed(2)}
+          </td>
+          <td class="py-3 px-3 mono">
+            <div class="text-white font-bold flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full ${isPositive ? 'bg-emerald-400' : 'bg-rose-400'}"></span>
+              <span>$${Number(currPrice).toFixed(2)}</span>
+            </div>
+          </td>
+          <td class="py-3 px-3 mono text-[11px]">
+            <div class="text-emerald-400 font-medium">T: $${Number(s.target_price).toFixed(2)} (+${Number(s.target_pct || 0).toFixed(1)}%)</div>
+            <div class="text-rose-400 font-medium">S: $${Number(s.stop_loss).toFixed(2)} (-${Number(s.stop_pct || 0).toFixed(1)}%)</div>
+          </td>
+          <td class="py-3 px-3">
+            <div class="flex items-center justify-between text-[9px] mono text-slate-400 mb-1">
+              <span class="text-rose-400">Stop</span>
+              <span class="text-emerald-400">Target</span>
+            </div>
+            <div class="range-track w-full">
+              <div class="range-thumb" style="left: ${progress}%"></div>
+            </div>
+          </td>
+          <td class="py-3 px-3 mono">
+            <div class="${pnlColor} font-bold text-xs">${pnlSign}${pnlPct.toFixed(2)}%</div>
+            <div class="text-[10px] text-slate-400">${pnlDollarSign}$${Number(pnlDollar).toFixed(2)}</div>
+          </td>
+          <td class="py-3 px-3">
+            ${statusBadge}
+          </td>
+          <td class="py-3 px-5 text-right">
+            <button onclick="tradeSignal(${JSON.stringify(s).replace(/"/g, '&quot;')})" class="px-2.5 py-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white border border-cyan-700/60 text-[11px] font-bold transition-all inline-flex items-center gap-1 shadow cursor-pointer">
+              <span>+ Take Trade</span>
+            </button>
+          </td>
+        </tr>
+      `;
+    }
+
     async function loadSignals() {
       const feed = document.getElementById('signals-feed');
       const cacheKey = currentSignalFilter || 'all';
 
-      // 1. Instant render if cached (0ms latency, zero disappearing setups)
+      // 1. Instant render if cached
       if (cachedSignalsData[cacheKey]) {
         renderSignalsFeed(cachedSignalsData[cacheKey]);
       }
@@ -1152,76 +1253,6 @@
           `;
         }
       }
-    }
-
-    function renderSignalCard(s) {
-      const isGalaxy = s.system === 'galaxy';
-      const badge = isGalaxy 
-        ? '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-cyan-950 text-cyan-400 border border-cyan-800/80 mono">GALAXY v2</span>'
-        : '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-purple-950 text-purple-400 border border-purple-800/80 mono">UNIVERSE</span>';
-
-      let statusBadge = '<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">⏳ PENDING</span>';
-      if (s.status === 'HIT_TARGET' || s.status === 'WON') {
-        statusBadge = `<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800/80">🎯 TARGET HIT (+${(s.outcome_pnl_pct || s.target_pct).toFixed(1)}%)</span>`;
-      } else if (s.status === 'HIT_STOP' || s.status === 'LOST') {
-        statusBadge = `<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-950 text-rose-400 border border-rose-800/80">🛑 STOPPED (-${Math.abs(s.outcome_pnl_pct || s.stop_pct).toFixed(1)}%)</span>`;
-      } else if (s.status === 'IN_PLAY' || s.status === 'ACTIVE') {
-        const liveSign = (s.outcome_pnl_pct || 0) >= 0 ? '+' : '';
-        statusBadge = `<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-blue-950 text-blue-300 border border-blue-800/80">🟢 IN PLAY (${liveSign}${(s.outcome_pnl_pct || 0).toFixed(1)}%)</span>`;
-      } else if (s.status === 'EXPIRED') {
-        statusBadge = '<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-950 text-amber-400 border border-amber-800/80">🟡 TIME LIMIT</span>';
-      }
-
-      const pnlDollar = s.hypothetical_pnl_dollar || 0;
-      const pnlDollarSign = pnlDollar >= 0 ? '+' : '';
-      const pnlDollarColor = pnlDollar >= 0 ? 'text-emerald-400' : 'text-rose-400';
-
-      return `
-        <div class="glass-card rounded-xl p-5 hover:border-slate-600 transition-all flex flex-col justify-between space-y-4">
-          <div>
-            <div class="flex items-start justify-between gap-2">
-              <div>
-                <div class="flex items-center gap-2">
-                  <span class="text-xl font-extrabold mono text-white">${s.ticker}</span>
-                  ${badge}
-                </div>
-                <div class="text-xs text-slate-400 font-medium truncate mt-0.5">${s.name || s.ticker}</div>
-              </div>
-              <div>${statusBadge}</div>
-            </div>
-
-            <div class="mt-3 py-2 px-3 bg-surface rounded-xl border border-border">
-              <div class="text-[11px] text-slate-400">Trigger: <span class="text-slate-200 font-semibold">${s.signal_type}</span></div>
-              <div class="text-[11px] text-slate-400 mt-0.5">Sector: <span class="text-slate-300 font-medium">${s.segment}</span></div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-2 mt-3 pt-2 border-t border-border/60 mono text-xs">
-              <div>
-                <div class="text-[9px] text-slate-500 uppercase">Trigger</div>
-                <div class="text-white font-bold">$${s.price.toFixed(2)}</div>
-              </div>
-              <div>
-                <div class="text-[9px] text-emerald-500 uppercase">Target</div>
-                <div class="text-emerald-400 font-bold">$${s.target_price.toFixed(2)} (+${s.target_pct.toFixed(1)}%)</div>
-              </div>
-              <div>
-                <div class="text-[9px] text-rose-500 uppercase">Stop</div>
-                <div class="text-rose-400 font-bold">$${s.stop_loss.toFixed(2)} (-${s.stop_pct.toFixed(1)}%)</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="pt-3 border-t border-border/60 flex items-center justify-between">
-            <div>
-              <div class="text-[9px] text-slate-500 uppercase mono">System Return</div>
-              <div class="${pnlDollarColor} font-bold text-xs mono">${pnlDollarSign}$${pnlDollar.toFixed(2)}</div>
-            </div>
-            <button onclick="tradeSignal(${JSON.stringify(s).replace(/"/g, '&quot;')})" class="px-3.5 py-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600 text-cyan-400 hover:text-white border border-cyan-700/60 text-xs font-bold transition-all flex items-center gap-1 shadow cursor-pointer">
-              <span>⚡ Execute Trade</span>
-            </button>
-          </div>
-        </div>
-      `;
     }
 
     function renderForecastFeed(data) {

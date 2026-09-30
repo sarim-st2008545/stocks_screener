@@ -133,7 +133,8 @@ class PortalRequestHandler(BaseHTTPRequestHandler):
         elif path == "/api/signals":
             query_params = parse_qs(parsed.query)
             system = query_params.get("system", [None])[0]
-            grouped_signals = records.get_signals_grouped_by_date(system=system)
+            prices = get_latest_cached_prices()
+            grouped_signals = records.get_signals_grouped_by_date(system=system, latest_prices=prices)
             self.send_json(grouped_signals)
             return
 

@@ -394,10 +394,17 @@ evaluate_signals_outcomes = auto_evaluate_all_signals
 
 def get_signals_grouped_by_date(
     system: Optional[str] = None,
+    latest_prices: Optional[dict[str, float]] = None,
     db_path: Optional[Path] = None,
 ) -> dict[str, list[dict[str, Any]]]:
-    """Retrieves all signals grouped chronologically by signal_date descending."""
+    """Retrieves all signals grouped chronologically by signal_date descending, enriched with live market performance."""
     init_db(db_path)
+
+    # Evaluate any pending/active signals against cached price history
+    try:
+        auto_evaluate_all_signals(db_path=db_path or DB_PATH)
+    except Exception:
+        pass
 
     conn = get_connection(db_path)
     cur = conn.cursor()
@@ -426,6 +433,31 @@ def get_signals_grouped_by_date(
                 item["metadata"] = json.loads(item["metadata"])
             except Exception:
                 pass
+
+        ticker = item["ticker"].upper()
+        entry_p = float(item["price"] or 0.0)
+        target_p = float(item["target_price"] or 0.0)
+        stop_p = float(item["stop_loss"] or 0.0)
+
+        # Attach live current price
+        curr_p = latest_prices.get(ticker, entry_p) if (latest_prices and ticker in latest_prices) else entry_p
+        item["current_price"] = curr_p
+
+        # Live performance vs Trigger price
+        if item["status"] in ("IN_PLAY", "ACTIVE", "PENDING"):
+            if entry_p > 0:
+                pnl_pct = ((curr_p - entry_p) / entry_p) * 100.0
+                item["outcome_pnl_pct"] = round(pnl_pct, 2)
+            else:
+                item["outcome_pnl_pct"] = 0.0
+
+        # Calculate visual target progress percentage (0% = Stop, 100% = Target, 50% = Entry)
+        total_range = target_p - stop_p
+        if total_range > 0:
+            prog = ((curr_p - stop_p) / total_range) * 100.0
+            item["progress_pct"] = max(0.0, min(100.0, round(prog, 1)))
+        else:
+            item["progress_pct"] = 50.0
 
         # Calculate theoretical dollar outcome
         alloc = total_cap * 0.33 if item["system"] == "galaxy" else total_cap * 0.20
