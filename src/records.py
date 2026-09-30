@@ -21,7 +21,8 @@ from typing import Any, Optional
 import numpy as np
 import pandas as pd
 
-DB_PATH = Path("data/records.db")
+BASE_DIR = Path(__file__).resolve().parent.parent
+DB_PATH = BASE_DIR / "data" / "records.db"
 
 
 def get_connection(db_path: Optional[Path] = None) -> sqlite3.Connection:
@@ -239,7 +240,7 @@ def load_price_history_for_ticker(ticker: str) -> Optional[pd.DataFrame]:
     """Loads price history for a single ticker from disk."""
     sym = ticker.upper()
     # Check data/prices/
-    p_path = Path("data/prices") / f"{sym}.csv"
+    p_path = BASE_DIR / "data" / "prices" / f"{sym}.csv"
     if p_path.exists():
         try:
             df = pd.read_csv(p_path, index_col=0, parse_dates=True)
@@ -250,9 +251,9 @@ def load_price_history_for_ticker(ticker: str) -> Optional[pd.DataFrame]:
             pass
 
     # Check data/galaxy/
-    g_path = Path("data/galaxy") / f"{sym}_5y.csv"
+    g_path = BASE_DIR / "data" / "galaxy" / f"{sym}_5y.csv"
     if not g_path.exists():
-        g_path = Path("data/galaxy") / f"{sym}.csv"
+        g_path = BASE_DIR / "data" / "galaxy" / f"{sym}.csv"
     if g_path.exists():
         try:
             df = pd.read_csv(g_path, index_col=0, parse_dates=True)
@@ -441,7 +442,9 @@ def get_signals_grouped_by_date(
 
         # Attach live current price
         curr_p = latest_prices.get(ticker, entry_p) if (latest_prices and ticker in latest_prices) else entry_p
-        item["current_price"] = curr_p
+        item["current_price"] = round(curr_p, 2)
+        price_diff = curr_p - entry_p
+        item["price_diff"] = round(price_diff, 2)
 
         # Live performance vs Trigger price
         if item["status"] in ("IN_PLAY", "ACTIVE", "PENDING"):
@@ -462,6 +465,7 @@ def get_signals_grouped_by_date(
         # Calculate theoretical dollar outcome
         alloc = total_cap * 0.33 if item["system"] == "galaxy" else total_cap * 0.20
         pnl_pct = float(item["outcome_pnl_pct"] or 0.0)
+        item["standard_alloc"] = round(alloc, 2)
         item["hypothetical_pnl_dollar"] = round((pnl_pct / 100.0) * alloc, 2)
         grouped[d_str].append(item)
 

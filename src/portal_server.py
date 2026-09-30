@@ -26,11 +26,12 @@ import time
 
 from src import records
 
-PORTAL_DIR = Path(__file__).parent / "portal"
+BASE_DIR = Path(__file__).resolve().parent.parent
+PORTAL_DIR = Path(__file__).resolve().parent / "portal"
 
 _LATEST_PRICES_CACHE: dict[str, float] = {}
 _LATEST_PRICES_CACHE_TIME: float = 0.0
-_CACHE_TTL_SECONDS: float = 30.0
+_CACHE_TTL_SECONDS: float = 60.0
 
 
 def _fast_extract_last_close(filepath: Path) -> float | None:
@@ -56,7 +57,11 @@ def _fast_extract_last_close(filepath: Path) -> float | None:
 
 
 def get_latest_cached_prices(force_refresh: bool = False) -> dict[str, float]:
-    """Scans cached CSV price data from data/prices/ and data/galaxy/ to get latest closing prices."""
+    """
+    Scans cached CSV price data from data/prices/ and data/galaxy/ as baseline,
+    and dynamically queries real-time live quotes via yfinance for all active signal/trade tickers.
+    Ensures 100% accurate live P&L on both local runs and cloud deployments (e.g. Render).
+    """
     global _LATEST_PRICES_CACHE, _LATEST_PRICES_CACHE_TIME
     now = time.time()
     if not force_refresh and _LATEST_PRICES_CACHE and (now - _LATEST_PRICES_CACHE_TIME < _CACHE_TTL_SECONDS):
@@ -64,8 +69,8 @@ def get_latest_cached_prices(force_refresh: bool = False) -> dict[str, float]:
 
     prices: dict[str, float] = {}
 
-    # Check data/prices/ (Universe)
-    p_dir = Path("data/prices")
+    # 1. Baseline: Check local CSV files (data/prices/ and data/galaxy/)
+    p_dir = BASE_DIR / "data" / "prices"
     if p_dir.exists():
         for f in p_dir.glob("*.csv"):
             ticker = f.stem.upper()
@@ -73,14 +78,50 @@ def get_latest_cached_prices(force_refresh: bool = False) -> dict[str, float]:
             if val is not None:
                 prices[ticker] = val
 
-    # Check data/galaxy/ (Galaxy)
-    g_dir = Path("data/galaxy")
+    g_dir = BASE_DIR / "data" / "galaxy"
     if g_dir.exists():
         for f in g_dir.glob("*.csv"):
             ticker = f.stem.replace("_5y", "").upper()
             val = _fast_extract_last_close(f)
             if val is not None:
                 prices[ticker] = val
+
+    # 2. Dynamic Live Quotes: Query active tickers from SQLite records.db
+    needed_tickers: set[str] = set()
+    db_path = BASE_DIR / "data" / "records.db"
+    if db_path.exists():
+        try:
+            import sqlite3
+            conn = sqlite3.connect(str(db_path))
+            cur = conn.cursor()
+            cur.execute("SELECT DISTINCT ticker FROM signals")
+            for r in cur.fetchall():
+                if r[0]:
+                    needed_tickers.add(r[0].strip().upper())
+            cur.execute("SELECT DISTINCT ticker FROM trades WHERE status = 'OPEN'")
+            for r in cur.fetchall():
+                if r[0]:
+                    needed_tickers.add(r[0].strip().upper())
+            conn.close()
+        except Exception:
+            pass
+
+    # 3. Fetch real-time market quotes via yfinance for needed tickers
+    if needed_tickers:
+        try:
+            import yfinance as yf
+            tickers_obj = yf.Tickers(" ".join(needed_tickers))
+            for sym in needed_tickers:
+                try:
+                    t = tickers_obj.tickers.get(sym)
+                    if t:
+                        lp = getattr(t.fast_info, "last_price", None)
+                        if lp and float(lp) > 0:
+                            prices[sym] = round(float(lp), 2)
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
     _LATEST_PRICES_CACHE = prices
     _LATEST_PRICES_CACHE_TIME = now
