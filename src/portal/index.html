@@ -453,6 +453,41 @@
 
         </div>
 
+        <!-- Executed Trades & Realized Profits Table -->
+        <div class="glass-card rounded-xl overflow-hidden shadow-xl space-y-3">
+          <div class="px-6 py-4 border-b border-border bg-card/40 flex items-center justify-between">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                <h3 class="text-xs font-bold text-white uppercase tracking-wider">My Executed Trades & Realized Profits</h3>
+              </div>
+              <p class="text-xs text-slate-400 mt-0.5">Your personal trades calculated by your actual shares bought and verified exits.</p>
+            </div>
+            <button onclick="openNewTradeModal()" class="px-3 py-1.5 rounded-lg bg-cyan-600/30 hover:bg-cyan-600 text-cyan-300 hover:text-white border border-cyan-500/40 text-xs font-bold transition-all shadow cursor-pointer">
+              + Log New Trade
+            </button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-border/80 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-card/20">
+                  <th class="py-3 px-6">Ticker / Sleeve</th>
+                  <th class="py-3 px-4">Shares Bought</th>
+                  <th class="py-3 px-4">Cost Basis</th>
+                  <th class="py-3 px-4">Entry Date / Price</th>
+                  <th class="py-3 px-4">Live / Exit Price</th>
+                  <th class="py-3 px-4">Status</th>
+                  <th class="py-3 px-6 text-right">Profit / Loss</th>
+                  <th class="py-3 px-5 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="forecast-executions-tbody" class="divide-y divide-border/60 text-xs">
+                <!-- Dynamically populated from data.executions -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Forward Projections Card -->
         <div class="glass-card p-6 rounded-xl border border-border space-y-4">
           <div class="flex items-center justify-between">
@@ -625,11 +660,12 @@
         </div>
         <div>
           <label class="text-xs font-semibold text-slate-300 block mb-1">Entry Price ($)</label>
-          <input id="trade-price" type="number" step="0.01" placeholder="12.50" class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-white mono text-sm focus:outline-none focus:border-cyan-500">
+          <input id="trade-price" oninput="updateTradeOutlay()" type="number" step="0.01" placeholder="12.50" class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-white mono text-sm focus:outline-none focus:border-cyan-500">
         </div>
         <div>
-          <label class="text-xs font-semibold text-slate-300 block mb-1">Shares</label>
-          <input id="trade-shares" type="number" step="1" value="1" class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-white mono text-sm focus:outline-none focus:border-cyan-500">
+          <label class="text-xs font-semibold text-slate-300 block mb-1">Shares Bought</label>
+          <input id="trade-shares" oninput="updateTradeOutlay()" type="number" step="1" value="1" class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-white mono text-sm focus:outline-none focus:border-cyan-500 font-bold">
+          <div id="trade-cost-calc" class="text-[11px] mono text-cyan-400 mt-1 font-semibold">Total: 1 sh × $0.00 = $0.00</div>
         </div>
         <div>
           <label class="text-xs font-semibold text-rose-400 block mb-1">Stop Loss ($)</label>
@@ -1163,7 +1199,7 @@
                     <th class="py-3 px-3">Stop / Target</th>
                     <th class="py-3 px-3 w-40">Target Progress</th>
                     <th class="py-3 px-3">Raised / Lost (%)</th>
-                    <th class="py-3 px-3">Raised / Lost ($)</th>
+                    <th class="py-3 px-3">Raised / Lost ($ / 1 Share)</th>
                     <th class="py-3 px-5 text-right">Action</th>
                   </tr>
                 </thead>
@@ -1258,14 +1294,12 @@
             </div>
             <div class="mt-0.5">${statusTag}</div>
           </td>
-          <!-- DOLLAR P&L COLUMN -->
+          <!-- DOLLAR P&L COLUMN (1 SHARE) -->
           <td class="py-3 px-3 mono">
             <div class="${pnlColor} ${dolHighlight}">
-              ${diffSign}$${Math.abs(priceDiff).toFixed(2)} <span class="text-[10px] font-normal text-slate-400">/ share</span>
+              ${diffSign}$${Math.abs(priceDiff).toFixed(2)}
             </div>
-            <div class="text-[10px] text-slate-400">
-              ${pnlDollarSign}$${Math.abs(pnlDollar).toFixed(2)} <span class="text-slate-500 font-normal">($${Math.round(alloc).toLocaleString()} pos)</span>
-            </div>
+            <div class="text-[10px] text-slate-500 font-medium">1 share</div>
           </td>
           <td class="py-3 px-5 text-right">
             <button onclick="tradeSignal(${JSON.stringify(s).replace(/"/g, '&quot;')})" class="px-2.5 py-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white border border-cyan-700/60 text-[11px] font-bold transition-all inline-flex items-center gap-1 shadow cursor-pointer">
@@ -1344,6 +1378,73 @@
       if (p90El) p90El.textContent = `+$${(fc.forecast_90d_pnl || 0).toLocaleString('en-US', {minimumFractionDigits: 0})}`;
       const p1yEl = document.getElementById('proj-1yr');
       if (p1yEl) p1yEl.textContent = `+$${(fc.forecast_1yr_pnl || 0).toLocaleString('en-US', {minimumFractionDigits: 0})}`;
+
+      // My Executions Table
+      const exTbody = document.getElementById('forecast-executions-tbody');
+      if (exTbody) {
+        const execs = data.executions || [];
+        if (execs.length === 0) {
+          exTbody.innerHTML = `
+            <tr>
+              <td colspan="8" class="text-center py-10 text-slate-500">
+                <div class="text-sm font-medium text-slate-400">No executed trades logged yet</div>
+                <div class="text-xs text-slate-600 mt-1">Click "+ Take Trade" on any setup to log your actual shares bought</div>
+              </td>
+            </tr>
+          `;
+        } else {
+          exTbody.innerHTML = execs.map(t => {
+            const isClosed = t.status === 'CLOSED';
+            const pnl = t.pnl_amount !== null && t.pnl_amount !== undefined ? Number(t.pnl_amount) : 0.0;
+            const pnlPct = t.pnl_pct !== null && t.pnl_pct !== undefined ? Number(t.pnl_pct) : 0.0;
+            const isWin = pnl >= 0;
+            const pnlColor = isWin ? 'text-emerald-400' : 'text-rose-400';
+            const pnlSign = isWin ? '+' : '';
+            const statusBadge = isClosed 
+              ? '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-300 border border-slate-700 font-mono">CLOSED</span>'
+              : '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-blue-950 text-blue-300 border border-blue-800 font-mono">ACTIVE LIVE</span>';
+            const exitOrLiveLabel = isClosed ? `$${Number(t.exit_price || t.entry_price).toFixed(2)} (Exit)` : `$${Number(t.current_price || t.entry_price).toFixed(2)} (Live)`;
+
+            const actionBtn = !isClosed ? `
+              <button onclick="openExitModal(${t.id})" class="px-2.5 py-1 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-700/60 text-[10px] font-bold transition-all cursor-pointer">
+                Close
+              </button>
+            ` : '<span class="text-[10px] text-slate-500">Realized</span>';
+
+            return `
+              <tr class="hover:bg-surface/60 transition-colors">
+                <td class="py-3 px-6">
+                  <span class="font-extrabold text-white mono text-sm">${t.ticker}</span>
+                  <span class="text-[10px] text-slate-500 ml-1.5 uppercase mono">${t.system}</span>
+                </td>
+                <td class="py-3 px-4 mono font-bold text-white">
+                  ${t.shares} <span class="text-[10px] font-normal text-slate-400">sh</span>
+                </td>
+                <td class="py-3 px-4 mono text-slate-300">
+                  $${(Number(t.cost_basis) || (t.shares * t.entry_price)).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                </td>
+                <td class="py-3 px-4 mono text-xs">
+                  <div class="text-white font-semibold">$${Number(t.entry_price).toFixed(2)}</div>
+                  <div class="text-slate-500 text-[10px]">${t.entry_date}</div>
+                </td>
+                <td class="py-3 px-4 mono text-xs">
+                  <div class="text-white font-semibold">${exitOrLiveLabel}</div>
+                </td>
+                <td class="py-3 px-4">
+                  ${statusBadge}
+                </td>
+                <td class="py-3 px-6 text-right mono">
+                  <div class="${pnlColor} font-bold text-sm">${pnlSign}$${pnl.toFixed(2)}</div>
+                  <div class="${pnlColor} text-[11px]">${pnlSign}${pnlPct.toFixed(2)}%</div>
+                </td>
+                <td class="py-3 px-5 text-right">
+                  ${actionBtn}
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }
 
       const wTbody = document.getElementById('weekly-breakdown-tbody');
       if (wTbody) {
@@ -1501,6 +1602,16 @@
       if (currentTab === 'forecast') loadForecast();
     }
 
+    function updateTradeOutlay() {
+      const price = parseFloat(document.getElementById('trade-price').value) || 0;
+      const shares = parseFloat(document.getElementById('trade-shares').value) || 0;
+      const total = price * shares;
+      const el = document.getElementById('trade-cost-calc');
+      if (el) {
+        el.textContent = `Total: ${shares} sh × $${price.toFixed(2)} = $${total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+      }
+    }
+
     // Trade Modal
     function openNewTradeModal() {
       document.getElementById('trade-signal-id').value = '';
@@ -1510,23 +1621,21 @@
       document.getElementById('trade-stop').value = '';
       document.getElementById('trade-target').value = '';
       document.getElementById('trade-notes').value = '';
+      updateTradeOutlay();
       document.getElementById('modal-trade').classList.remove('hidden');
     }
 
     function tradeSignal(s) {
       document.getElementById('trade-signal-id').value = s.id || '';
       document.getElementById('trade-ticker').value = s.ticker;
-      document.getElementById('trade-system').value = s.system || 'galaxy';
-      document.getElementById('trade-price').value = s.price.toFixed(2);
-      
-      const capital = cachedPortfolio.cash_available || 1000;
-      const alloc = s.system === 'galaxy' ? capital * 0.33 : capital * 0.20;
-      const shares = Math.max(1, Math.floor(alloc / s.price));
-      document.getElementById('trade-shares').value = shares;
-
-      document.getElementById('trade-stop').value = s.stop_loss.toFixed(2);
-      document.getElementById('trade-target').value = s.target_price.toFixed(2);
+      document.getElementById('trade-system').value = s.system || 'universe';
+      const p = s.current_price !== undefined ? Number(s.current_price) : Number(s.price);
+      document.getElementById('trade-price').value = p.toFixed(2);
+      document.getElementById('trade-shares').value = '1';
+      document.getElementById('trade-stop').value = Number(s.stop_loss).toFixed(2);
+      document.getElementById('trade-target').value = Number(s.target_price).toFixed(2);
       document.getElementById('trade-notes').value = `${s.signal_type} trigger from ${s.signal_date}`;
+      updateTradeOutlay();
       document.getElementById('modal-trade').classList.remove('hidden');
     }
 
@@ -1546,8 +1655,8 @@
         signal_id: document.getElementById('trade-signal-id').value || null
       };
 
-      if (!payload.ticker || isNaN(payload.entry_price) || isNaN(payload.stop_loss) || isNaN(payload.target_price)) {
-        return alert('Please fill in all price and ticker fields');
+      if (!payload.ticker || isNaN(payload.entry_price) || isNaN(payload.shares) || payload.shares <= 0 || isNaN(payload.stop_loss) || isNaN(payload.target_price)) {
+        return alert('Please fill in all price, shares, and ticker fields');
       }
 
       const res = await fetch('/api/trades/open', {
@@ -1558,7 +1667,9 @@
       const data = await res.json();
       if (data.status === 'ok') {
         closeNewTradeModal();
-        switchTab('dashboard');
+        loadDashboard();
+        loadForecast();
+        switchTab('forecast');
       } else {
         alert('Error: ' + (data.error || 'Failed to log trade'));
       }
@@ -1600,6 +1711,8 @@
       if (data.status === 'ok') {
         closeExitModal();
         loadDashboard();
+        loadHistory();
+        loadForecast();
       } else {
         alert('Error: ' + (data.error || 'Failed to close trade'));
       }

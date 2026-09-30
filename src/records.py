@@ -462,11 +462,16 @@ def get_signals_grouped_by_date(
         else:
             item["progress_pct"] = 50.0
 
-        # Calculate theoretical dollar outcome
-        alloc = total_cap * 0.33 if item["system"] == "galaxy" else total_cap * 0.20
-        pnl_pct = float(item["outcome_pnl_pct"] or 0.0)
-        item["standard_alloc"] = round(alloc, 2)
-        item["hypothetical_pnl_dollar"] = round((pnl_pct / 100.0) * alloc, 2)
+        # Calculate dollar outcome strictly for 1 single stock (1 share)
+        if item["status"] in ("HIT_TARGET", "WON"):
+            item["hypothetical_pnl_dollar"] = round(target_p - entry_p, 2)
+        elif item["status"] in ("HIT_STOP", "LOST"):
+            item["hypothetical_pnl_dollar"] = round(stop_p - entry_p, 2)
+        else:
+            item["hypothetical_pnl_dollar"] = round(curr_p - entry_p, 2)
+
+        item["price_diff"] = item["hypothetical_pnl_dollar"]
+        item["shares"] = 1
         grouped[d_str].append(item)
 
     return grouped
@@ -770,8 +775,14 @@ def get_analytics_and_forecast(
     for t in all_trades:
         if t["status"] == "OPEN":
             cur_p = latest_prices.get(t["ticker"], t["entry_price"]) if latest_prices else t["entry_price"]
-            t["pnl_amount"] = (cur_p - t["entry_price"]) * t["shares"]
-            t["pnl_pct"] = ((cur_p - t["entry_price"]) / t["entry_price"]) * 100.0
+            t["current_price"] = round(cur_p, 2)
+            t["pnl_amount"] = round((cur_p - t["entry_price"]) * t["shares"], 2)
+            t["pnl_pct"] = round(((cur_p - t["entry_price"]) / t["entry_price"]) * 100.0, 2)
+        else:
+            t["current_price"] = round(t["exit_price"] or t["entry_price"], 2)
+            t["pnl_amount"] = round(t["pnl_amount"] or 0.0, 2)
+            t["pnl_pct"] = round(t["pnl_pct"] or 0.0, 2)
+        t["cost_basis"] = round(t["entry_price"] * t["shares"], 2)
 
     # -------------------------------------------------------------
     # 1. System Overall Performance (All Signals)
@@ -984,4 +995,5 @@ def get_analytics_and_forecast(
         },
         "weekly": weekly_list,
         "monthly": monthly_list,
+        "executions": all_trades,
     }
