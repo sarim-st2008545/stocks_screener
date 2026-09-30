@@ -68,7 +68,7 @@ def send_telegram_message(
         return False
 
 
-def format_signal_alert(sig: dict[str, Any], system: str = "galaxy") -> str:
+def format_signal_alert(sig: dict[str, Any], system: str = "galaxy", scan_date: str = "") -> str:
     """Formats an individual trading setup into an institutional alert card."""
     ticker = sig.get("ticker", "UNKNOWN")
     price = sig.get("price", 0.0)
@@ -91,6 +91,8 @@ def format_signal_alert(sig: dict[str, Any], system: str = "galaxy") -> str:
         f"━━━━━━━━━━━━━━━━━━━━━",
         f"*{ticker}* • `{sys_tag}`",
     ]
+    if scan_date:
+        lines.append(f"📅 *Date:* `{scan_date}`")
     if segment:
         lines.append(f"Sector: _{segment}_")
 
@@ -139,12 +141,12 @@ def notify_scanner_results(
 
     # Individual setup cards
     for s in galaxy_setups:
-        card = format_signal_alert(s, system="galaxy")
+        card = format_signal_alert(s, system="galaxy", scan_date=scan_date)
         if send_telegram_message(card):
             total_sent += 1
 
     for s in universe_setups:
-        card = format_signal_alert(s, system="universe")
+        card = format_signal_alert(s, system="universe", scan_date=scan_date)
         if send_telegram_message(card):
             total_sent += 1
 
