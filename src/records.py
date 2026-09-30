@@ -426,12 +426,13 @@ def get_signals_grouped_by_date(
     conn.close()
 
     traded_by_sig_id: dict[int, dict[str, Any]] = {}
-    traded_by_ticker_date: dict[tuple[str, str], dict[str, Any]] = {}
     for tr in trade_rows:
-        if tr.get("signal_id"):
-            traded_by_sig_id[tr["signal_id"]] = tr
-        k = (tr["ticker"].upper(), str(tr["entry_date"])[:10])
-        traded_by_ticker_date[k] = tr
+        sid = tr.get("signal_id")
+        if sid is not None and str(sid).strip() and str(sid).strip().lower() != "null":
+            try:
+                traded_by_sig_id[int(sid)] = tr
+            except (ValueError, TypeError):
+                pass
 
     total_cap = float(get_setting("total_capital", "10000.0", db_path=db_path))
 
@@ -450,10 +451,8 @@ def get_signals_grouped_by_date(
         ticker = item["ticker"].upper()
         sig_id = item.get("id")
 
-        # Mark if this specific signal was traded
-        trade_match = traded_by_sig_id.get(sig_id)
-        if not trade_match:
-            trade_match = traded_by_ticker_date.get((ticker, d_str))
+        # Mark strictly if this specific signal was traded by its unique signal_id
+        trade_match = traded_by_sig_id.get(int(sig_id)) if sig_id is not None else None
 
         if trade_match:
             item["is_traded"] = True
@@ -520,6 +519,13 @@ def open_trade(
     init_db(db_path)
     if not entry_date:
         entry_date = str(date.today())
+    if signal_id is not None and str(signal_id).strip() and str(signal_id).strip().lower() != "null":
+        try:
+            signal_id = int(signal_id)
+        except (ValueError, TypeError):
+            signal_id = None
+    else:
+        signal_id = None
 
     conn = get_connection(db_path)
     cur = conn.cursor()

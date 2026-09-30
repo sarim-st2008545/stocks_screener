@@ -645,6 +645,7 @@
       </div>
 
       <input type="hidden" id="trade-signal-id" value="">
+      <input type="hidden" id="trade-entry-date" value="">
 
       <div class="grid grid-cols-2 gap-4">
         <div>
@@ -1659,6 +1660,7 @@
     // Trade Modal
     function openNewTradeModal() {
       document.getElementById('trade-signal-id').value = '';
+      document.getElementById('trade-entry-date').value = '';
       document.getElementById('trade-ticker').value = '';
       document.getElementById('trade-price').value = '';
       document.getElementById('trade-shares').value = '1';
@@ -1670,7 +1672,8 @@
     }
 
     function tradeSignal(s) {
-      document.getElementById('trade-signal-id').value = s.id || '';
+      document.getElementById('trade-signal-id').value = s.id ? String(s.id) : '';
+      document.getElementById('trade-entry-date').value = s.signal_date || '';
       document.getElementById('trade-ticker').value = s.ticker;
       document.getElementById('trade-system').value = s.system || 'universe';
       // Pre-fill Entry Price with the exact setup Trigger Price
@@ -1688,6 +1691,7 @@
     }
 
     async function submitNewTrade() {
+      const sigIdVal = document.getElementById('trade-signal-id').value;
       const payload = {
         ticker: document.getElementById('trade-ticker').value.trim().toUpperCase(),
         system: document.getElementById('trade-system').value,
@@ -1695,8 +1699,9 @@
         shares: parseFloat(document.getElementById('trade-shares').value),
         stop_loss: parseFloat(document.getElementById('trade-stop').value),
         target_price: parseFloat(document.getElementById('trade-target').value),
+        entry_date: document.getElementById('trade-entry-date').value || undefined,
         notes: document.getElementById('trade-notes').value,
-        signal_id: document.getElementById('trade-signal-id').value || null
+        signal_id: (sigIdVal && sigIdVal !== 'null' && sigIdVal !== 'undefined') ? parseInt(sigIdVal, 10) : null
       };
 
       if (!payload.ticker || isNaN(payload.entry_price) || isNaN(payload.shares) || payload.shares <= 0 || isNaN(payload.stop_loss) || isNaN(payload.target_price)) {

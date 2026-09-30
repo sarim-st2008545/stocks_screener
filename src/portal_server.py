@@ -248,7 +248,8 @@ class PortalRequestHandler(BaseHTTPRequestHandler):
                 stop_loss = float(payload["stop_loss"])
                 target_price = float(payload["target_price"])
                 entry_date = payload.get("entry_date")
-                signal_id = payload.get("signal_id")
+                raw_sig_id = payload.get("signal_id")
+                signal_id = int(raw_sig_id) if (raw_sig_id is not None and str(raw_sig_id).strip() and str(raw_sig_id).strip().lower() != "null") else None
                 notes = payload.get("notes", "")
 
                 trade_id = records.open_trade(
