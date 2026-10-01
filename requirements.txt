@@ -3,6 +3,9 @@ requests>=2.31
 pyyaml>=6.0
 python-dotenv>=1.0
 
+# Database (Neon PostgreSQL in production, SQLite fallback locally)
+psycopg2-binary>=2.9
+
 # Market data
 yfinance>=0.2.40
 pandas>=2.0

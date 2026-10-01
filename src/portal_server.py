@@ -86,25 +86,25 @@ def get_latest_cached_prices(force_refresh: bool = False) -> dict[str, float]:
             if val is not None:
                 prices[ticker] = val
 
-    # 2. Dynamic Live Quotes: Query active tickers from SQLite records.db
+    # 2. Dynamic Live Quotes: Query active tickers from database
     needed_tickers: set[str] = set()
-    db_path = BASE_DIR / "data" / "records.db"
-    if db_path.exists():
-        try:
-            import sqlite3
-            conn = sqlite3.connect(str(db_path))
-            cur = conn.cursor()
-            cur.execute("SELECT DISTINCT ticker FROM signals")
-            for r in cur.fetchall():
-                if r[0]:
-                    needed_tickers.add(r[0].strip().upper())
-            cur.execute("SELECT DISTINCT ticker FROM trades WHERE status = 'OPEN'")
-            for r in cur.fetchall():
-                if r[0]:
-                    needed_tickers.add(r[0].strip().upper())
-            conn.close()
-        except Exception:
-            pass
+    try:
+        from src import db as _db
+        conn = _db.get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT DISTINCT ticker FROM signals")
+        for r in cur.fetchall():
+            val = r["ticker"] if isinstance(r, dict) else r[0]
+            if val:
+                needed_tickers.add(val.strip().upper())
+        cur.execute("SELECT DISTINCT ticker FROM trades WHERE status = 'OPEN'")
+        for r in cur.fetchall():
+            val = r["ticker"] if isinstance(r, dict) else r[0]
+            if val:
+                needed_tickers.add(val.strip().upper())
+        conn.close()
+    except Exception:
+        pass
 
     # 3. Fetch real-time market quotes via yfinance for needed tickers
     if needed_tickers:

@@ -40,6 +40,7 @@ jobs:
 
       - name: Run Scanners & Dispatch Telegram Signals
         env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN || '8598127712:AAHDz8HNum6QT9G9aA4OOvW050TeWO_0u8Y' }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID || '5847323936' }}
           PORTAL_URL: 'https://aura-quant-k37x.onrender.com'
@@ -60,9 +61,9 @@ jobs:
           notify_scanner_results(galaxy_setups, universe_setups, scan_date=scan_date)
           "
 
-      - name: Commit & Sync Updated Database to Repository
+      - name: Commit & Sync Updated Price Data
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/records.db data/prices/ data/galaxy/ || true
-          git diff --quiet && git diff --staged --quiet || (git commit -m "chore(cron): sync scanner records and prices [skip ci]" && git push)
+          git add data/prices/ data/galaxy/ || true
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore(cron): sync price data [skip ci]" && git push)

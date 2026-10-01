@@ -13,7 +13,6 @@ Handles:
 from __future__ import annotations
 
 import json
-import sqlite3
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional
@@ -21,92 +20,20 @@ from typing import Any, Optional
 import numpy as np
 import pandas as pd
 
+from src import db
+
 BASE_DIR = Path(__file__).resolve().parent.parent
-DB_PATH = BASE_DIR / "data" / "records.db"
 
 
-def get_connection(db_path: Optional[Path] = None) -> sqlite3.Connection:
-    if db_path is None:
-        db_path = DB_PATH
-    db_path = Path(db_path)
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(db_path))
-    conn.row_factory = sqlite3.Row
-    return conn
+def get_connection(db_path: Optional[Path] = None):
+    """Returns a database connection (PostgreSQL when DATABASE_URL is set, else SQLite)."""
+    return db.get_connection(db_path)
 
 
 def init_db(db_path: Optional[Path] = None):
-    """Initializes the SQLite database tables."""
-    conn = get_connection(db_path)
-    cur = conn.cursor()
+    """Initializes the database tables (delegates to db module)."""
+    db.init_db(db_path)
 
-    # Settings table
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS settings (
-            key TEXT PRIMARY KEY,
-            value TEXT NOT NULL,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-
-    # Signals table
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS signals (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            system TEXT NOT NULL,                -- 'universe' or 'galaxy'
-            signal_date TEXT NOT NULL,           -- 'YYYY-MM-DD'
-            ticker TEXT NOT NULL,
-            name TEXT,
-            segment TEXT,
-            signal_type TEXT NOT NULL,
-            price REAL NOT NULL,                 -- Trigger price / close
-            stop_loss REAL NOT NULL,
-            target_price REAL NOT NULL,
-            stop_pct REAL NOT NULL,
-            target_pct REAL NOT NULL,
-            rr_ratio REAL,
-            shariah_screen TEXT,
-            metadata TEXT,                       -- JSON string
-            status TEXT DEFAULT 'PENDING',       -- 'PENDING', 'IN_PLAY', 'HIT_TARGET', 'HIT_STOP', 'EXPIRED', 'WON', 'LOST'
-            outcome_pnl_pct REAL,
-            outcome_date TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(system, signal_date, ticker)
-        )
-    """)
-
-    # Trades table (Active & Closed Portfolio Positions)
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS trades (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            signal_id INTEGER,
-            system TEXT NOT NULL,                -- 'universe' or 'galaxy'
-            ticker TEXT NOT NULL,
-            direction TEXT DEFAULT 'LONG',
-            shares REAL NOT NULL,
-            entry_date TEXT NOT NULL,
-            entry_price REAL NOT NULL,
-            stop_loss REAL NOT NULL,
-            target_price REAL NOT NULL,
-            status TEXT DEFAULT 'OPEN',          -- 'OPEN' or 'CLOSED'
-            exit_date TEXT,
-            exit_price REAL,
-            exit_reason TEXT,
-            pnl_amount REAL,
-            pnl_pct REAL,
-            notes TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (signal_id) REFERENCES signals (id)
-        )
-    """)
-
-    # Seed default portfolio capital if not set
-    cur.execute("SELECT value FROM settings WHERE key = 'total_capital'")
-    if cur.fetchone() is None:
-        cur.execute("INSERT INTO settings (key, value) VALUES ('total_capital', '10000.0')")
-
-    conn.commit()
-    conn.close()
 
 
 def get_setting(key: str, default: str = "", db_path: Optional[Path] = None) -> str:
@@ -278,7 +205,7 @@ def load_price_histories_for_tickers(tickers: set[str]) -> dict[str, pd.DataFram
 
 def auto_evaluate_all_signals(
     price_histories: Optional[dict[str, pd.DataFrame]] = None,
-    db_path: Path = DB_PATH,
+    db_path: Optional[Path] = None,
 ) -> int:
     """
     Evaluates ALL signals in the database (both traded and untraded).
@@ -403,7 +330,7 @@ def get_signals_grouped_by_date(
 
     # Evaluate any pending/active signals against cached price history
     try:
-        auto_evaluate_all_signals(db_path=db_path or DB_PATH)
+        auto_evaluate_all_signals(db_path=db_path)
     except Exception:
         pass
 
@@ -530,14 +457,23 @@ def open_trade(
     conn = get_connection(db_path)
     cur = conn.cursor()
 
-    cur.execute("""
+    insert_sql = """
         INSERT INTO trades (
             signal_id, system, ticker, shares, entry_date,
             entry_price, stop_loss, target_price, status, notes
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'OPEN', ?)
-    """, (signal_id, system, ticker.upper(), shares, entry_date, entry_price, stop_loss, target_price, notes))
+    """
+    params = (signal_id, system, ticker.upper(), shares, entry_date, entry_price, stop_loss, target_price, notes)
 
-    trade_id = cur.lastrowid
+    if db.is_postgres():
+        insert_sql += " RETURNING id"
+        cur.execute(insert_sql, params)
+        row = cur.fetchone()
+        trade_id = row["id"]
+    else:
+        cur.execute(insert_sql, params)
+        trade_id = cur.lastrowid
+
     conn.commit()
     conn.close()
     return trade_id
