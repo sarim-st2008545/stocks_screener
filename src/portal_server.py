@@ -128,9 +128,25 @@ def get_latest_cached_prices(force_refresh: bool = False) -> dict[str, float]:
     return prices
 
 
+import math
+
+
+def _sanitize_json_obj(obj):
+    if isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return 0.0
+        return obj
+    elif isinstance(obj, dict):
+        return {k: _sanitize_json_obj(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [_sanitize_json_obj(v) for v in obj]
+    return obj
+
+
 class PortalRequestHandler(BaseHTTPRequestHandler):
     def send_json(self, data: dict | list, status: int = HTTPStatus.OK):
-        body = json.dumps(data, default=str).encode("utf-8")
+        clean_data = _sanitize_json_obj(data)
+        body = json.dumps(clean_data, default=str).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))

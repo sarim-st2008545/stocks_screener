@@ -882,6 +882,7 @@
       switchTab('forecast');
       loadDashboard();
       setInterval(() => {
+        if (currentTab === 'forecast') loadForecast();
         if (currentTab === 'dashboard') loadDashboard(false);
         if (currentTab === 'signals') loadSignals();
       }, 15000);

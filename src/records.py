@@ -298,10 +298,18 @@ def auto_evaluate_all_signals(
 
         if not resolved:
             outcome = "IN_PLAY"
-            outcome_pnl = ((latest_bar_close - entry_p) / entry_p) * 100.0
+            if entry_p > 0 and not pd.isna(latest_bar_close):
+                outcome_pnl = ((latest_bar_close - entry_p) / entry_p) * 100.0
+            else:
+                outcome_pnl = 0.0
             outcome_date = str(forward_bars.index[-1])[:10]
 
         if outcome:
+            if outcome_pnl is None or pd.isna(outcome_pnl) or np.isnan(outcome_pnl) or np.isinf(outcome_pnl):
+                outcome_pnl = 0.0
+            else:
+                outcome_pnl = round(float(outcome_pnl), 4)
+
             cur.execute("""
                 UPDATE signals SET
                     status = ?,
@@ -799,23 +807,36 @@ def get_analytics_and_forecast(
     total_system_expected_pnl = 0.0
     for s in all_signals:
         alloc = total_capital * 0.33 if s["system"] == "galaxy" else total_capital * 0.20
-        pnl_pct = float(s["outcome_pnl_pct"] or 0.0)
+        raw_pnl = s.get("outcome_pnl_pct")
+        if raw_pnl is None or pd.isna(raw_pnl):
+            pnl_pct = 0.0
+        else:
+            try:
+                pnl_pct = float(raw_pnl)
+                if np.isnan(pnl_pct) or np.isinf(pnl_pct):
+                    pnl_pct = 0.0
+            except (ValueError, TypeError):
+                pnl_pct = 0.0
         pnl_dollar = (pnl_pct / 100.0) * alloc
-        s["hypothetical_pnl"] = pnl_dollar
+        s["hypothetical_pnl"] = round(pnl_dollar, 2)
         total_system_expected_pnl += pnl_dollar
 
     # -------------------------------------------------------------
     # 2. Actual Overall Performance (Trader Trades)
     # -------------------------------------------------------------
-    actual_realized = sum(t["pnl_amount"] for t in all_trades if t["status"] == "CLOSED" and t["pnl_amount"] is not None)
-    actual_unrealized = sum(t["pnl_amount"] for t in all_trades if t["status"] == "OPEN" and t["pnl_amount"] is not None)
+    actual_realized = sum(float(t["pnl_amount"] or 0.0) for t in all_trades if t["status"] == "CLOSED" and t["pnl_amount"] is not None and not np.isnan(float(t["pnl_amount"] or 0.0)))
+    actual_unrealized = sum(float(t["pnl_amount"] or 0.0) for t in all_trades if t["status"] == "OPEN" and t["pnl_amount"] is not None and not np.isnan(float(t["pnl_amount"] or 0.0)))
     total_actual_pnl = actual_realized + actual_unrealized
 
     closed_trades = [t for t in all_trades if t["status"] == "CLOSED"]
-    actual_wins = [t for t in closed_trades if (t["pnl_amount"] or 0) > 0]
+    actual_wins = [t for t in closed_trades if (t.get("pnl_amount") or 0) > 0]
     actual_win_rate = (len(actual_wins) / len(closed_trades) * 100.0) if closed_trades else 0.0
 
-    capture_efficiency = (total_actual_pnl / total_system_expected_pnl * 100.0) if (total_system_expected_pnl > 0 and total_actual_pnl > 0) else 0.0
+    capture_efficiency = 0.0
+    if total_system_expected_pnl > 0 and total_actual_pnl > 0:
+        capture_efficiency = (total_actual_pnl / total_system_expected_pnl * 100.0)
+    if np.isnan(capture_efficiency) or np.isinf(capture_efficiency):
+        capture_efficiency = 0.0
     capture_efficiency = min(100.0, max(0.0, capture_efficiency))
 
     # -------------------------------------------------------------
