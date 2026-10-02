@@ -457,6 +457,37 @@ def open_trade(
     conn = get_connection(db_path)
     cur = conn.cursor()
 
+    # Deduplication & Idempotency:
+    # 1. If linked to a specific signal_id and already OPEN, update it instead of creating a duplicate
+    if signal_id is not None:
+        cur.execute("SELECT id FROM trades WHERE signal_id = ? AND status = 'OPEN'", (signal_id,))
+        existing = cur.fetchone()
+        if existing:
+            trade_id = existing["id"] if isinstance(existing, dict) else existing[0]
+            update_sql = """
+                UPDATE trades SET
+                    shares = ?, entry_price = ?, stop_loss = ?, target_price = ?, entry_date = ?, notes = ?
+                WHERE id = ?
+            """
+            cur.execute(update_sql, (shares, entry_price, stop_loss, target_price, entry_date, notes, trade_id))
+            conn.commit()
+            conn.close()
+            return trade_id
+    else:
+        # 2. If entered manually without signal_id, prevent rapid double-clicks on identical trade
+        cur.execute(
+            "SELECT id FROM trades WHERE ticker = ? AND system = ? AND entry_date = ? AND entry_price = ? AND status = 'OPEN'",
+            (ticker.upper(), system, entry_date, entry_price)
+        )
+        existing = cur.fetchone()
+        if existing:
+            trade_id = existing["id"] if isinstance(existing, dict) else existing[0]
+            update_sql = "UPDATE trades SET shares = ?, stop_loss = ?, target_price = ?, notes = ? WHERE id = ?"
+            cur.execute(update_sql, (shares, stop_loss, target_price, notes, trade_id))
+            conn.commit()
+            conn.close()
+            return trade_id
+
     insert_sql = """
         INSERT INTO trades (
             signal_id, system, ticker, shares, entry_date,
