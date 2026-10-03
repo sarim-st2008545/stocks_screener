@@ -523,9 +523,10 @@ def close_trade(
     exit_price: float,
     exit_reason: str = "Manual Exit",
     exit_date: Optional[str] = None,
+    shares_to_close: Optional[float] = None,
     db_path: Optional[Path] = None,
 ) -> bool:
-    """Closes an active portfolio trade and records realized P&L."""
+    """Closes an active portfolio trade (fully or partially) and records realized P&L."""
     init_db(db_path)
     if not exit_date:
         exit_date = str(date.today())
@@ -540,30 +541,61 @@ def close_trade(
         return False
 
     entry_price = float(row["entry_price"])
-    shares = float(row["shares"])
-    pnl_amount = (exit_price - entry_price) * shares
+    total_shares = float(row["shares"])
+
+    # Determine closing vs remaining shares
+    if shares_to_close is None or float(shares_to_close) <= 0 or float(shares_to_close) >= total_shares:
+        closing_shares = total_shares
+        is_partial = False
+    else:
+        closing_shares = float(shares_to_close)
+        is_partial = True
+
+    pnl_amount = (exit_price - entry_price) * closing_shares
     pnl_pct = ((exit_price - entry_price) / entry_price) * 100.0
 
-    cur.execute("""
-        UPDATE trades SET
-            status = 'CLOSED',
-            exit_date = ?,
-            exit_price = ?,
-            exit_reason = ?,
-            pnl_amount = ?,
-            pnl_pct = ?
-        WHERE id = ?
-    """, (exit_date, exit_price, exit_reason, pnl_amount, pnl_pct, trade_id))
-
-    if row["signal_id"]:
-        outcome = "WON" if pnl_pct > 0 else "LOST"
+    if not is_partial:
+        # Full Close: update the current trade record to CLOSED
         cur.execute("""
-            UPDATE signals SET
-                status = ?,
-                outcome_pnl_pct = ?,
-                outcome_date = ?
+            UPDATE trades SET
+                status = 'CLOSED',
+                exit_date = ?,
+                exit_price = ?,
+                exit_reason = ?,
+                pnl_amount = ?,
+                pnl_pct = ?
             WHERE id = ?
-        """, (outcome, pnl_pct, exit_date, row["signal_id"]))
+        """, (exit_date, exit_price, exit_reason, pnl_amount, pnl_pct, trade_id))
+
+        if row["signal_id"]:
+            outcome = "WON" if pnl_pct > 0 else "LOST"
+            cur.execute("""
+                UPDATE signals SET
+                    status = ?,
+                    outcome_pnl_pct = ?,
+                    outcome_date = ?
+                WHERE id = ?
+            """, (outcome, pnl_pct, exit_date, row["signal_id"]))
+    else:
+        # Partial Close:
+        # 1. Update the remaining open shares in the current record
+        remaining_shares = round(total_shares - closing_shares, 4)
+        cur.execute("UPDATE trades SET shares = ? WHERE id = ?", (remaining_shares, trade_id))
+
+        # 2. Insert a dedicated record for the CLOSED portion
+        partial_reason = f"{exit_reason} (Partial {closing_shares} sh)"
+        cur.execute("""
+            INSERT INTO trades (
+                signal_id, system, ticker, direction, shares, entry_date,
+                entry_price, stop_loss, target_price, status, exit_date,
+                exit_price, exit_reason, pnl_amount, pnl_pct, notes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'CLOSED', ?, ?, ?, ?, ?, ?)
+        """, (
+            row["signal_id"], row["system"], row["ticker"], row["direction"] or "LONG",
+            closing_shares, row["entry_date"], entry_price, float(row["stop_loss"]),
+            float(row["target_price"]), exit_date, exit_price, partial_reason,
+            pnl_amount, pnl_pct, row["notes"] or ""
+        ))
 
     conn.commit()
     conn.close()

@@ -290,12 +290,15 @@ class PortalRequestHandler(BaseHTTPRequestHandler):
                 exit_price = float(payload["exit_price"])
                 exit_reason = payload.get("exit_reason", "Manual Exit")
                 exit_date = payload.get("exit_date")
+                shares_val = payload.get("shares")
+                shares_to_close = float(shares_val) if (shares_val is not None and str(shares_val).strip() != "") else None
 
                 success = records.close_trade(
                     trade_id=trade_id,
                     exit_price=exit_price,
                     exit_reason=exit_reason,
                     exit_date=exit_date,
+                    shares_to_close=shares_to_close,
                 )
                 if success:
                     self.send_json({"status": "ok", "trade_id": trade_id})

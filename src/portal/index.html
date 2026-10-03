@@ -691,7 +691,7 @@
   </div>
 
   <!-- ================================================================= -->
-  <!-- MODAL: CLOSE ACTIVE TRADE -->
+  <!-- MODAL: CLOSE ACTIVE TRADE (FULL OR PARTIAL) -->
   <!-- ================================================================= -->
   <div id="modal-close" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
     <div class="glass-card rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-border">
@@ -701,28 +701,59 @@
       </div>
 
       <input type="hidden" id="close-trade-id" value="">
+      <input type="hidden" id="close-entry-price-val" value="0">
+      <input type="hidden" id="close-max-shares-val" value="0">
       <div id="close-trade-summary" class="text-xs text-slate-300 bg-surface p-3 rounded-xl border border-border mono space-y-1">
+      </div>
+
+      <!-- Shares to Sell / Close Field with Quick % Chips -->
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <label class="text-xs font-semibold text-slate-300">Shares to Sell / Close</label>
+          <span class="text-[11px] text-slate-400">Total Open: <span id="close-max-shares" class="text-white font-bold mono">0</span></span>
+        </div>
+        <input id="close-shares" type="number" step="any" min="0.0001" oninput="updateClosePreview()" class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-white mono font-bold focus:outline-none focus:border-cyan-500 text-sm">
+        
+        <!-- Quick Preset Chips -->
+        <div class="flex gap-1.5 mt-2">
+          <button type="button" onclick="setCloseSharesFraction(0.25)" class="flex-1 py-1 rounded-lg bg-surface hover:bg-slate-800 border border-border text-[10px] font-mono text-slate-300 hover:text-white cursor-pointer transition-colors">25%</button>
+          <button type="button" onclick="setCloseSharesFraction(0.50)" class="flex-1 py-1 rounded-lg bg-surface hover:bg-slate-800 border border-border text-[10px] font-mono text-slate-300 hover:text-white cursor-pointer transition-colors">50% (Half)</button>
+          <button type="button" onclick="setCloseSharesFraction(0.75)" class="flex-1 py-1 rounded-lg bg-surface hover:bg-slate-800 border border-border text-[10px] font-mono text-slate-300 hover:text-white cursor-pointer transition-colors">75%</button>
+          <button type="button" onclick="setCloseSharesFraction(1.00)" class="flex-1 py-1 rounded-lg bg-surface hover:bg-slate-800 border border-border text-[10px] font-mono text-cyan-400 hover:text-cyan-300 font-bold cursor-pointer transition-colors">100% (All)</button>
+        </div>
       </div>
 
       <div>
         <label class="text-xs font-semibold text-slate-300 block mb-1">Exit Price ($)</label>
-        <input id="close-exit-price" type="number" step="0.01" class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-white mono font-bold focus:outline-none focus:border-cyan-500 text-sm">
+        <input id="close-exit-price" type="number" step="0.01" oninput="updateClosePreview()" class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-white mono font-bold focus:outline-none focus:border-cyan-500 text-sm">
+      </div>
+
+      <!-- Realized P&L Live Calculator Banner -->
+      <div id="close-preview-banner" class="p-3 rounded-xl bg-surface/70 border border-border text-xs text-slate-300 mono flex items-center justify-between">
+        <div>
+          <div class="text-[10px] text-slate-400 uppercase">Estimated Realized P&L</div>
+          <div id="close-calc-pnl" class="font-extrabold text-sm text-emerald-400">+$0.00 (+0.0%)</div>
+        </div>
+        <div class="text-right">
+          <div class="text-[10px] text-slate-400 uppercase">Remaining Position</div>
+          <div id="close-calc-remaining" class="font-bold text-xs text-slate-300">0 shares</div>
+        </div>
       </div>
 
       <div>
         <label class="text-xs font-semibold text-slate-300 block mb-1">Exit Reason</label>
         <select id="close-exit-reason" class="w-full bg-surface border border-border rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500">
+          <option value="Manual Exit">Manual Profit Take</option>
           <option value="Target Hit">Target Hit (Mean Reversion Pop)</option>
           <option value="Stop Loss Hit">Stop Loss Hit (Risk Floor)</option>
           <option value="Time Limit Expired">Day 4 Limit Reached</option>
           <option value="RSI Overbought">RSI > 70 Snapback</option>
-          <option value="Manual Exit">Manual Profit Take</option>
         </select>
       </div>
 
       <div class="flex justify-end gap-2 pt-2">
         <button onclick="closeExitModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white cursor-pointer">Cancel</button>
-        <button onclick="submitCloseTrade()" class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-bold text-white shadow cursor-pointer">Confirm Exit</button>
+        <button id="btn-submit-close-trade" onclick="submitCloseTrade()" class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold text-white shadow cursor-pointer">Confirm Exit</button>
       </div>
     </div>
   </div>
@@ -1742,20 +1773,76 @@
       }
     }
 
-    // Close Trade Modal
+    // Close Trade Modal (Full or Partial)
     function openExitModal(tradeId) {
       const t = cachedActiveTrades.find(x => x.id === tradeId);
       if (!t) return;
       document.getElementById('close-trade-id').value = t.id;
+      document.getElementById('close-entry-price-val').value = t.entry_price;
+      document.getElementById('close-max-shares-val').value = t.shares;
+      document.getElementById('close-max-shares').textContent = t.shares;
+      document.getElementById('close-shares').value = t.shares;
+      document.getElementById('close-shares').max = t.shares;
       document.getElementById('close-exit-price').value = t.current_price.toFixed(2);
+      
       const days = t.days_held || 0;
       const daysText = days === 1 ? '1 day' : `${days} days`;
       document.getElementById('close-trade-summary').innerHTML = `
-        <div class="font-bold text-white">${t.ticker} (${t.shares} shares)</div>
+        <div class="font-bold text-white">${t.ticker} (${t.shares} shares active)</div>
         <div>Entry: $${t.entry_price.toFixed(2)} | Target: $${t.target_price.toFixed(2)} | Stop: $${t.stop_loss.toFixed(2)}</div>
         <div class="mt-1 text-slate-400">Held since entry: ${daysText}</div>
       `;
+      updateClosePreview();
       document.getElementById('modal-close').classList.remove('hidden');
+    }
+
+    function setCloseSharesFraction(fraction) {
+      const maxShares = parseFloat(document.getElementById('close-max-shares-val').value) || 0;
+      if (maxShares <= 0) return;
+      let targetShares;
+      if (fraction >= 1.0) {
+        targetShares = maxShares;
+      } else {
+        targetShares = Math.max(1, Math.round(maxShares * fraction * 100) / 100);
+        if (targetShares > maxShares) targetShares = maxShares;
+      }
+      document.getElementById('close-shares').value = targetShares;
+      updateClosePreview();
+    }
+
+    function updateClosePreview() {
+      const maxShares = parseFloat(document.getElementById('close-max-shares-val').value) || 0;
+      const entryPrice = parseFloat(document.getElementById('close-entry-price-val').value) || 0;
+      const exitPrice = parseFloat(document.getElementById('close-exit-price').value) || 0;
+      let sharesToClose = parseFloat(document.getElementById('close-shares').value);
+
+      if (isNaN(sharesToClose) || sharesToClose <= 0) {
+        sharesToClose = 0;
+      }
+      if (sharesToClose > maxShares) {
+        sharesToClose = maxShares;
+        document.getElementById('close-shares').value = maxShares;
+      }
+
+      const remaining = Math.max(0, Math.round((maxShares - sharesToClose) * 1000) / 1000);
+      const remEl = document.getElementById('close-calc-remaining');
+      if (remEl) {
+        remEl.textContent = `${remaining} share${remaining === 1 ? '' : 's'}`;
+      }
+
+      const pnlEl = document.getElementById('close-calc-pnl');
+      if (pnlEl) {
+        if (sharesToClose > 0 && entryPrice > 0 && !isNaN(exitPrice)) {
+          const pnlDollar = (exitPrice - entryPrice) * sharesToClose;
+          const pnlPct = ((exitPrice - entryPrice) / entryPrice) * 100.0;
+          const sign = pnlDollar >= 0 ? '+' : '';
+          pnlEl.textContent = `${sign}$${pnlDollar.toFixed(2)} (${sign}${pnlPct.toFixed(1)}%)`;
+          pnlEl.className = `font-extrabold text-sm ${pnlDollar >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+        } else {
+          pnlEl.textContent = '$0.00 (0.0%)';
+          pnlEl.className = 'font-extrabold text-sm text-slate-400';
+        }
+      }
     }
 
     function closeExitModal() {
@@ -1766,24 +1853,46 @@
       const tradeId = parseInt(document.getElementById('close-trade-id').value);
       const exitPrice = parseFloat(document.getElementById('close-exit-price').value);
       const exitReason = document.getElementById('close-exit-reason').value;
+      const sharesToClose = parseFloat(document.getElementById('close-shares').value);
 
       if (isNaN(exitPrice)) return alert('Please enter an exit price');
+      if (isNaN(sharesToClose) || sharesToClose <= 0) return alert('Please enter a valid number of shares to close');
 
-      const res = await fetch('/api/trades/close', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trade_id: tradeId, exit_price: exitPrice, exit_reason: exitReason })
-      });
-      const data = await res.json();
-      if (data.status === 'ok') {
-        closeExitModal();
-        cachedSignalsData = {};
-        loadSignals();
-        loadDashboard();
-        loadHistory();
-        loadForecast();
-      } else {
-        alert('Error: ' + (data.error || 'Failed to close trade'));
+      const btn = document.getElementById('btn-submit-close-trade');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Closing...';
+      }
+
+      try {
+        const res = await fetch('/api/trades/close', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            trade_id: tradeId,
+            exit_price: exitPrice,
+            exit_reason: exitReason,
+            shares: sharesToClose
+          })
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          closeExitModal();
+          cachedSignalsData = {};
+          loadSignals();
+          loadDashboard();
+          loadHistory();
+          loadForecast();
+        } else {
+          alert('Error: ' + (data.error || 'Failed to close trade'));
+        }
+      } catch (err) {
+        alert('Network error while closing trade: ' + err.message);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Confirm Exit';
+        }
       }
     }
 
