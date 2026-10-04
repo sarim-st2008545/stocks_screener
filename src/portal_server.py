@@ -206,6 +206,13 @@ class PortalRequestHandler(BaseHTTPRequestHandler):
             self.send_json(prices)
             return
 
+        elif path == "/api/auto/summary":
+            prices = get_latest_cached_prices()
+            from src import auto_engine
+            auto_data = auto_engine.get_auto_portfolio_summary(latest_prices=prices)
+            self.send_json(auto_data)
+            return
+
         # -------------------------------------------------------------
         # Static Web Portal Files
         # -------------------------------------------------------------
@@ -355,6 +362,15 @@ class PortalRequestHandler(BaseHTTPRequestHandler):
                 self.send_json({"error": str(e)}, status=HTTPStatus.BAD_REQUEST)
             return
 
+        elif path == "/api/auto/replay":
+            try:
+                from src import auto_engine
+                res = auto_engine.replay_history()
+                self.send_json(res)
+            except Exception as e:
+                self.send_json({"error": str(e)}, status=HTTPStatus.BAD_REQUEST)
+            return
+
         elif path == "/api/scan":
             scan_target = payload.get("target", "both")
             refresh = bool(payload.get("refresh", False))
@@ -375,6 +391,14 @@ class PortalRequestHandler(BaseHTTPRequestHandler):
                 # Auto-evaluate outcomes across all signals
                 evaluated_count = records.auto_evaluate_all_signals()
                 get_latest_cached_prices(force_refresh=True)
+
+                # Update autonomous Forward Lab portfolio
+                try:
+                    from src import auto_engine
+                    auto_engine.replay_history()
+                except Exception:
+                    pass
+
                 results["evaluated_count"] = evaluated_count
                 results["galaxy_setups_count"] = len(galaxy_setups)
                 results["universe_setups_count"] = len(universe_setups)

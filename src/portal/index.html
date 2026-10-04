@@ -134,6 +134,10 @@
             <button id="tab-history-btn" onclick="switchTab('history')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-2 cursor-pointer">
               <span>📜 Closed History</span>
             </button>
+            <button id="tab-autoforward-btn" onclick="switchTab('autoforward')" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-purple-400 hover:text-purple-200 flex items-center gap-2 cursor-pointer">
+              <span>🤖 Forward Lab (Autonomous)</span>
+              <span id="nav-auto-active-count" class="px-1.5 py-0.2 rounded-full bg-purple-950 text-purple-300 text-[10px] mono font-bold">4</span>
+            </button>
           </nav>
 
           <!-- Right: Mobile quick scan, Portfolio HUD & Floating P&L -->
@@ -163,11 +167,12 @@
 
     <!-- MOBILE SEGMENTED TAB BAR (Clean, single-line, sticky) -->
     <div class="md:hidden bg-obsidian/95 backdrop-blur border-b border-border px-2.5 py-1.5">
-      <div class="grid grid-cols-4 gap-1 bg-card/80 p-0.5 rounded-xl border border-border/80 text-center">
-        <button id="mobile-tab-forecast-btn" onclick="switchTab('forecast')" class="text-xs py-2 rounded-lg text-white bg-cyan-600 font-semibold cursor-pointer shadow-sm">Stats & Forecast</button>
-        <button id="mobile-tab-signals-btn" onclick="switchTab('signals')" class="text-xs py-2 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer">Setups</button>
-        <button id="mobile-tab-dashboard-btn" onclick="switchTab('dashboard')" class="text-xs py-2 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer">Trades (<span id="mobile-nav-active-count">1</span>)</button>
-        <button id="mobile-tab-history-btn" onclick="switchTab('history')" class="text-xs py-2 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer">History</button>
+      <div class="grid grid-cols-5 gap-1 bg-card/80 p-0.5 rounded-xl border border-border/80 text-center">
+        <button id="mobile-tab-forecast-btn" onclick="switchTab('forecast')" class="text-[11px] py-2 rounded-lg text-white bg-cyan-600 font-semibold cursor-pointer shadow-sm">Forecast</button>
+        <button id="mobile-tab-signals-btn" onclick="switchTab('signals')" class="text-[11px] py-2 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer">Setups</button>
+        <button id="mobile-tab-dashboard-btn" onclick="switchTab('dashboard')" class="text-[11px] py-2 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer">Trades (<span id="mobile-nav-active-count">1</span>)</button>
+        <button id="mobile-tab-history-btn" onclick="switchTab('history')" class="text-[11px] py-2 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer">History</button>
+        <button id="mobile-tab-autoforward-btn" onclick="switchTab('autoforward')" class="text-[11px] py-2 rounded-lg text-purple-400 font-semibold hover:text-white cursor-pointer">Auto Lab</button>
       </div>
     </div>
 
@@ -607,6 +612,185 @@
         </div>
       </section>
 
+      <!-- ================================================================= -->
+      <!-- TAB 5: FORWARD LAB (AUTONOMOUS PAPER TRADING BENCHMARK) -->
+      <!-- ================================================================= -->
+      <section id="view-autoforward" class="hidden space-y-8">
+        
+        <!-- Header & Action Row -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
+          <div>
+            <div class="flex items-center gap-2.5">
+              <span class="text-base font-extrabold text-white uppercase tracking-wider">Forward Lab (Autonomous Paper Trading)</span>
+              <span class="text-[10px] px-2.5 py-0.5 rounded-full bg-purple-950 text-purple-300 border border-purple-800 font-bold mono">100% UNATTENDED</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">Autonomous forward benchmark starting at 20,000 QAR with +5,000 QAR/month salary inflows, sized at 1.5% Kelly risk parity.</p>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button id="btn-replay-auto" onclick="triggerAutoReplay()" class="px-4 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-700/60 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow">
+              <svg id="replay-auto-icon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <span id="replay-auto-text">Replay from Day 1</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 4-Card Live Autonomous HUD Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+          
+          <!-- Card 1: Total Account Equity -->
+          <div class="glass-card p-5 rounded-2xl border-l-4 border-purple-500 space-y-2">
+            <div class="flex items-center justify-between text-[11px] uppercase font-bold tracking-wider text-slate-400">
+              <span>Total Account Equity</span>
+              <span id="auto-roi-badge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">+70.3% ROI</span>
+            </div>
+            <div id="auto-total-equity-usd" class="text-2xl sm:text-3xl font-extrabold mono text-white">$11,693.27</div>
+            <div class="flex items-center justify-between text-xs pt-1 border-t border-border/80">
+              <span class="text-slate-500 text-[11px]">QAR Equivalent:</span>
+              <span id="auto-total-equity-qar" class="font-bold mono text-purple-300 text-xs">42,563.50 QAR</span>
+            </div>
+          </div>
+
+          <!-- Card 2: Net Profit (Realized + Floating) -->
+          <div class="glass-card p-5 rounded-2xl border-l-4 border-emerald-500 space-y-2">
+            <div class="flex items-center justify-between text-[11px] uppercase font-bold tracking-wider text-slate-400">
+              <span>Total Net Profit</span>
+              <span class="text-[10px] text-emerald-400 font-bold mono">COMBINED</span>
+            </div>
+            <div id="auto-net-profit-usd" class="text-2xl sm:text-3xl font-extrabold mono text-emerald-400">+$4,825.13</div>
+            <div class="flex items-center justify-between text-xs pt-1 border-t border-border/80">
+              <span class="text-slate-500 text-[11px]">In QAR:</span>
+              <span id="auto-net-profit-qar" class="font-bold mono text-emerald-400 text-xs">+17,563.47 QAR</span>
+            </div>
+          </div>
+
+          <!-- Card 3: Cash & 15% Reserve Buffer -->
+          <div class="glass-card p-5 rounded-2xl border-l-4 border-cyan-500 space-y-2">
+            <div class="flex items-center justify-between text-[11px] uppercase font-bold tracking-wider text-slate-400">
+              <span>Cash Available</span>
+              <span class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-cyan-950 text-cyan-300 border border-cyan-800">15% BUFFER</span>
+            </div>
+            <div id="auto-cash-usd" class="text-2xl sm:text-3xl font-extrabold mono text-white">$4,936.08</div>
+            <div class="flex items-center justify-between text-xs pt-1 border-t border-border/80">
+              <span class="text-slate-500 text-[11px]">In QAR:</span>
+              <span id="auto-cash-qar" class="font-bold mono text-cyan-400 text-xs">17,967.33 QAR</span>
+            </div>
+          </div>
+
+          <!-- Card 4: Cumulative Inflows -->
+          <div class="glass-card p-5 rounded-2xl border-l-4 border-blue-500 space-y-2">
+            <div class="flex items-center justify-between text-[11px] uppercase font-bold tracking-wider text-slate-400">
+              <span>Total Inflows Deposited</span>
+              <span class="text-[10px] text-slate-400 font-mono">2 DEPOSITS</span>
+            </div>
+            <div id="auto-deposits-usd" class="text-2xl sm:text-3xl font-extrabold mono text-white">$6,868.14</div>
+            <div class="flex items-center justify-between text-xs pt-1 border-t border-border/80">
+              <span class="text-slate-500 text-[11px]">Total QAR:</span>
+              <span id="auto-deposits-qar" class="font-bold mono text-blue-300 text-xs">25,000.00 QAR</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Institutional Risk-Parity Sizing Legend -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="p-3.5 rounded-xl bg-card/60 border border-border text-xs space-y-1">
+            <div class="flex items-center gap-1.5 font-bold text-white">
+              <span>🛡️ 1.5% Risk Parity</span>
+            </div>
+            <p class="text-[11px] text-slate-400">Max dollar loss strictly capped at 1.5% of equity per trade upon stop hit.</p>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-card/60 border border-border text-xs space-y-1">
+            <div class="flex items-center gap-1.5 font-bold text-white">
+              <span>⚖️ Unified Pool</span>
+            </div>
+            <p class="text-[11px] text-slate-400">Galaxy v2 & Universe Swing share 100% of capital equally (max 4 concurrent trades).</p>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-card/60 border border-border text-xs space-y-1">
+            <div class="flex items-center gap-1.5 font-bold text-white">
+              <span>🎯 Auto Profit-Scaling</span>
+            </div>
+            <p class="text-[11px] text-slate-400">Banks 50% shares at Target 1, moves stop to Breakeven, and trails the runner.</p>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-card/60 border border-border text-xs space-y-1">
+            <div class="flex items-center gap-1.5 font-bold text-white">
+              <span>🚀 Capitulation Cannon</span>
+            </div>
+            <p class="text-[11px] text-slate-400">15% cash reserve unlocked only for extreme panic dips (RSI-2 < 5 or R:R ≥ 2.5).</p>
+          </div>
+        </div>
+
+        <!-- Active Automated Positions Table -->
+        <div class="glass-card rounded-2xl overflow-hidden shadow-xl space-y-3">
+          <div class="px-6 py-4 border-b border-border bg-card/40 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-purple-400 animate-pulse"></span>
+              <h3 class="text-sm font-bold text-white uppercase tracking-wider">Active Automated Positions</h3>
+              <span id="auto-active-positions-badge" class="px-2 py-0.5 rounded-full bg-purple-950 text-purple-300 text-[10px] mono font-bold border border-purple-800">4 Open</span>
+            </div>
+            <div class="text-xs text-slate-400 mono">
+              <span>Deployed: </span><span id="auto-deployed-summary" class="font-bold text-white">$5,370.50 (19,548 QAR)</span>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-border/80 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-card/20">
+                  <th class="py-3 px-6">Ticker / System</th>
+                  <th class="py-3 px-4">Position Sizing</th>
+                  <th class="py-3 px-4">Entry Date & Price</th>
+                  <th class="py-3 px-4">Live Price</th>
+                  <th class="py-3 px-4">Target & Stop Range</th>
+                  <th class="py-3 px-6 text-right">Floating P&L (USD / QAR)</th>
+                </tr>
+              </thead>
+              <tbody id="auto-positions-tbody" class="divide-y divide-border/60 text-sm">
+                <tr>
+                  <td colspan="6" class="text-center py-12 text-slate-500">Loading automated positions...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Autonomous Trade Journal & Deposit Log -->
+        <div class="glass-card rounded-2xl overflow-hidden shadow-xl space-y-3">
+          <div class="px-6 py-4 border-b border-border bg-card/40 flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-bold text-white uppercase tracking-wider">Autonomous Trade Journal & Inflows</h3>
+              <p class="text-xs text-slate-400 mt-0.5">Audit ledger of all automated entries, scaling exits, and monthly salary deposits.</p>
+            </div>
+            <div class="text-xs text-slate-400 mono">
+              <span>Realized Banked: </span><span id="auto-realized-summary" class="font-bold text-emerald-400">+$3,438.44 (12,515 QAR)</span>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-border/80 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-card/20">
+                  <th class="py-3 px-6">Ticker / Event</th>
+                  <th class="py-3 px-4">Shares</th>
+                  <th class="py-3 px-4">Entry / Action Date</th>
+                  <th class="py-3 px-4">Exit Price & Reason</th>
+                  <th class="py-3 px-4">Status</th>
+                  <th class="py-3 px-6 text-right">Realized Return</th>
+                </tr>
+              </thead>
+              <tbody id="auto-journal-tbody" class="divide-y divide-border/60 text-sm">
+                <tr>
+                  <td colspan="6" class="text-center py-12 text-slate-500">Loading autonomous journal...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
     </main>
   </div>
 
@@ -916,6 +1100,7 @@
         if (currentTab === 'forecast') loadForecast();
         if (currentTab === 'dashboard') loadDashboard(false);
         if (currentTab === 'signals') loadSignals();
+        if (currentTab === 'autoforward') loadAutoForward();
       }, 15000);
     });
 
@@ -925,25 +1110,35 @@
       document.getElementById('view-signals').classList.toggle('hidden', tab !== 'signals');
       document.getElementById('view-dashboard').classList.toggle('hidden', tab !== 'dashboard');
       document.getElementById('view-history').classList.toggle('hidden', tab !== 'history');
+      const autoView = document.getElementById('view-autoforward');
+      if (autoView) autoView.classList.toggle('hidden', tab !== 'autoforward');
 
-      const tabs = ['signals', 'dashboard', 'forecast', 'history'];
+      const tabs = ['signals', 'dashboard', 'forecast', 'history', 'autoforward'];
       tabs.forEach(t => {
         // Desktop nav button
         const btn = document.getElementById(`tab-${t}-btn`);
         if (btn) {
           if (t === tab) {
-            btn.className = 'px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-cyan-600 text-white shadow-md shadow-cyan-900/30 flex items-center gap-2 cursor-pointer';
+            btn.className = t === 'autoforward'
+              ? 'px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-purple-600 text-white shadow-md shadow-purple-900/30 flex items-center gap-2 cursor-pointer'
+              : 'px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-cyan-600 text-white shadow-md shadow-cyan-900/30 flex items-center gap-2 cursor-pointer';
           } else {
-            btn.className = 'px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-2 cursor-pointer';
+            btn.className = t === 'autoforward'
+              ? 'px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-purple-400 hover:text-purple-200 flex items-center gap-2 cursor-pointer'
+              : 'px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-2 cursor-pointer';
           }
         }
         // Mobile nav button
         const mBtn = document.getElementById(`mobile-tab-${t}-btn`);
         if (mBtn) {
           if (t === tab) {
-            mBtn.className = 'text-xs py-2 rounded-lg text-white bg-cyan-600 font-semibold cursor-pointer shadow-sm';
+            mBtn.className = t === 'autoforward'
+              ? 'text-[11px] py-2 rounded-lg text-white bg-purple-600 font-semibold cursor-pointer shadow-sm'
+              : 'text-[11px] py-2 rounded-lg text-white bg-cyan-600 font-semibold cursor-pointer shadow-sm';
           } else {
-            mBtn.className = 'text-xs py-2 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer';
+            mBtn.className = t === 'autoforward'
+              ? 'text-[11px] py-2 rounded-lg text-purple-400 font-medium hover:text-white cursor-pointer'
+              : 'text-[11px] py-2 rounded-lg text-slate-400 font-medium hover:text-white cursor-pointer';
           }
         }
       });
@@ -952,6 +1147,231 @@
       if (tab === 'dashboard') loadDashboard();
       if (tab === 'forecast') loadForecast();
       if (tab === 'history') loadHistory();
+      if (tab === 'autoforward') loadAutoForward();
+    }
+
+    let cachedAutoData = null;
+
+    async function loadAutoForward() {
+      if (cachedAutoData) {
+        renderAutoForward(cachedAutoData);
+      }
+      try {
+        const res = await fetch('/api/auto/summary');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        cachedAutoData = data;
+        renderAutoForward(data);
+      } catch (err) {
+        console.error('Failed to load auto portfolio data:', err);
+      }
+    }
+
+    async function triggerAutoReplay() {
+      const btn = document.getElementById('btn-replay-auto');
+      const text = document.getElementById('replay-auto-text');
+      const icon = document.getElementById('replay-auto-icon');
+      if (btn) btn.disabled = true;
+      if (text) text.textContent = 'Replaying...';
+      if (icon) icon.classList.add('animate-spin');
+
+      try {
+        const res = await fetch('/api/auto/replay', { method: 'POST' });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          cachedAutoData = null;
+          await loadAutoForward();
+        } else {
+          alert('Error replaying: ' + (data.error || 'Failed'));
+        }
+      } catch (e) {
+        alert('Network error: ' + e.message);
+      } finally {
+        if (btn) btn.disabled = false;
+        if (text) text.textContent = 'Replay from Day 1';
+        if (icon) icon.classList.remove('animate-spin');
+      }
+    }
+
+    function renderAutoForward(data) {
+      if (!data) return;
+      const sum = data.summary || {};
+      const active = data.active_positions || [];
+      const journal = data.trade_journal || [];
+
+      // Update HUD
+      const eqUsd = document.getElementById('auto-total-equity-usd');
+      if (eqUsd) eqUsd.textContent = `$${(sum.total_equity_usd || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+
+      const eqQar = document.getElementById('auto-total-equity-qar');
+      if (eqQar) eqQar.textContent = `${(sum.total_equity_qar || 0).toLocaleString('en-US', {minimumFractionDigits: 2})} QAR`;
+
+      const roiBadge = document.getElementById('auto-roi-badge');
+      if (roiBadge) {
+        const roi = sum.roi_pct || 0;
+        roiBadge.textContent = `${roi >= 0 ? '+' : ''}${roi.toFixed(1)}% ROI`;
+        roiBadge.className = `px-2 py-0.5 rounded text-[10px] font-mono font-bold ${roi >= 0 ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-rose-950 text-rose-300 border border-rose-800'}`;
+      }
+
+      const netUsd = document.getElementById('auto-net-profit-usd');
+      if (netUsd) {
+        const net = sum.net_profit_usd || 0;
+        netUsd.textContent = `${net >= 0 ? '+' : ''}$${net.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+        netUsd.className = `text-2xl sm:text-3xl font-extrabold mono ${net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      }
+
+      const netQar = document.getElementById('auto-net-profit-qar');
+      if (netQar) {
+        const netQ = sum.net_profit_qar || 0;
+        netQar.textContent = `${netQ >= 0 ? '+' : ''}${netQ.toLocaleString('en-US', {minimumFractionDigits: 2})} QAR`;
+        netQar.className = `font-bold mono text-xs ${netQ >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      }
+
+      const cashUsd = document.getElementById('auto-cash-usd');
+      if (cashUsd) cashUsd.textContent = `$${(sum.cash_available_usd || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+
+      const cashQar = document.getElementById('auto-cash-qar');
+      if (cashQar) cashQar.textContent = `${(sum.cash_available_qar || 0).toLocaleString('en-US', {minimumFractionDigits: 2})} QAR`;
+
+      const depUsd = document.getElementById('auto-deposits-usd');
+      if (depUsd) depUsd.textContent = `$${(sum.total_deposited_usd || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+
+      const depQar = document.getElementById('auto-deposits-qar');
+      if (depQar) depQar.textContent = `${(sum.total_deposited_qar || 0).toLocaleString('en-US', {minimumFractionDigits: 2})} QAR`;
+
+      const actBadge = document.getElementById('auto-active-positions-badge');
+      if (actBadge) actBadge.textContent = `${active.length} Open`;
+
+      const navAutoBadge = document.getElementById('nav-auto-active-count');
+      if (navAutoBadge) navAutoBadge.textContent = active.length;
+
+      const depSum = document.getElementById('auto-deployed-summary');
+      if (depSum) depSum.textContent = `$${(sum.deployed_capital_usd || 0).toFixed(2)} (${(sum.deployed_capital_qar || 0).toFixed(0)} QAR)`;
+
+      const realSum = document.getElementById('auto-realized-summary');
+      if (realSum) realSum.textContent = `+$${(sum.realized_pnl_usd || 0).toFixed(2)} (${(sum.realized_pnl_qar || 0).toFixed(0)} QAR)`;
+
+      // Render Active Positions
+      const posTbody = document.getElementById('auto-positions-tbody');
+      if (posTbody) {
+        if (active.length === 0) {
+          posTbody.innerHTML = `
+            <tr>
+              <td colspan="6" class="text-center py-12 text-slate-500">
+                <div class="text-sm font-medium text-slate-400">No active automated positions open</div>
+                <div class="text-xs text-slate-600 mt-1">Cash is safe in reserve. Positions open automatically when scanner signals form.</div>
+              </td>
+            </tr>
+          `;
+        } else {
+          posTbody.innerHTML = active.map(p => {
+            const isGalaxy = p.system === 'galaxy';
+            const sysBadge = isGalaxy 
+              ? '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-cyan-950 text-cyan-400 border border-cyan-800 mono">GALAXY v2</span>'
+              : '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-purple-950 text-purple-400 border border-purple-800 mono">UNIVERSE</span>';
+
+            const statusBadge = p.status === 'PARTIAL_CLOSED'
+              ? '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800 mono">T1 HIT (RUNNER)</span>'
+              : '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-blue-950 text-blue-300 border border-blue-800 mono">OPEN FULL</span>';
+
+            const pnl = p.unrealized_pnl_usd || 0;
+            const pnlQar = p.unrealized_pnl_qar || 0;
+            const pnlPct = p.unrealized_pnl_pct || 0;
+            const isWin = pnl >= 0;
+            const pnlColor = isWin ? 'text-emerald-400' : 'text-rose-400';
+            const sign = isWin ? '+' : '';
+
+            return `
+              <tr class="hover:bg-surface/60 transition-colors">
+                <td class="py-4 px-6">
+                  <div class="flex items-center gap-2">
+                    <span class="font-extrabold text-white mono text-base">${p.ticker}</span>
+                    ${sysBadge}
+                  </div>
+                  <div class="mt-1">${statusBadge}</div>
+                </td>
+                <td class="py-4 px-4 mono text-xs">
+                  <div class="text-white font-bold">${p.remaining_shares} <span class="text-[10px] text-slate-400 font-normal">shares</span></div>
+                  <div class="text-slate-400 text-[11px]">$${p.cost_basis_usd.toFixed(2)} (${p.cost_basis_qar.toFixed(0)} QAR)</div>
+                </td>
+                <td class="py-4 px-4 mono text-xs">
+                  <div class="text-white font-bold">$${p.entry_price.toFixed(2)}</div>
+                  <div class="text-slate-500 text-[11px]">${p.entry_date}</div>
+                </td>
+                <td class="py-4 px-4 mono text-xs">
+                  <div class="text-white font-bold flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                    <span>$${p.current_price.toFixed(2)}</span>
+                  </div>
+                  <div class="text-[10px] text-slate-500">Live Quote</div>
+                </td>
+                <td class="py-4 px-4 mono text-xs">
+                  <div class="flex items-center justify-between text-[11px]">
+                    <span class="text-rose-400">Stop: $${p.stop_loss.toFixed(2)}</span>
+                    <span class="text-emerald-400">Target: $${p.target_price.toFixed(2)}</span>
+                  </div>
+                  <div class="w-full bg-surface h-1.5 rounded-full overflow-hidden border border-border mt-1.5">
+                    <div class="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full" style="width: ${p.progress_pct || 50}%"></div>
+                  </div>
+                </td>
+                <td class="py-4 px-6 text-right mono">
+                  <div class="${pnlColor} font-bold text-base">${sign}$${pnl.toFixed(2)}</div>
+                  <div class="${pnlColor} text-xs font-semibold">${sign}${pnlPct.toFixed(1)}% <span class="text-slate-500 font-normal">(${sign}${pnlQar.toFixed(0)} QAR)</span></div>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }
+
+      // Render Journal
+      const jTbody = document.getElementById('auto-journal-tbody');
+      if (jTbody) {
+        if (journal.length === 0) {
+          jTbody.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-slate-500">No entries in autonomous journal</td></tr>`;
+        } else {
+          jTbody.innerHTML = journal.map(j => {
+            const isClosed = j.status === 'CLOSED';
+            const isRunner = j.status === 'PARTIAL_CLOSED';
+            const pnl = j.realized_pnl_usd || 0;
+            const pnlSign = pnl >= 0 ? '+' : '';
+            const pnlColor = pnl >= 0 ? 'text-emerald-400' : 'text-rose-400';
+
+            const statusLabel = isClosed
+              ? '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-300 border border-slate-700 font-mono">CLOSED</span>'
+              : (isRunner
+                ? '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono">T1 SCALED</span>'
+                : '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-purple-950 text-purple-300 border border-purple-800 font-mono">ACTIVE</span>');
+
+            return `
+              <tr class="hover:bg-surface/60 transition-colors">
+                <td class="py-3 px-6">
+                  <span class="font-extrabold text-white mono text-sm">${j.ticker}</span>
+                  <span class="text-[10px] text-slate-500 ml-1.5 uppercase mono">${j.system}</span>
+                </td>
+                <td class="py-3 px-4 mono text-xs text-white">
+                  ${j.shares} sh <span class="text-slate-500">(${j.remaining_shares} left)</span>
+                </td>
+                <td class="py-3 px-4 mono text-xs">
+                  <div class="text-white">$${j.entry_price.toFixed(2)}</div>
+                  <div class="text-slate-500 text-[10px]">${j.entry_date}</div>
+                </td>
+                <td class="py-3 px-4 mono text-xs">
+                  <div class="text-white font-semibold">${j.exit_price ? '$' + j.exit_price.toFixed(2) : '--'}</div>
+                  <div class="text-slate-400 text-[10px]">${j.exit_reason || j.notes || '--'}</div>
+                </td>
+                <td class="py-3 px-4">
+                  ${statusLabel}
+                </td>
+                <td class="py-3 px-6 text-right mono">
+                  <div class="${pnlColor} font-bold text-sm">${pnl !== 0 ? pnlSign + '$' + pnl.toFixed(2) : '--'}</div>
+                  <div class="${pnlColor} text-[11px]">${pnl !== 0 ? pnlSign + j.realized_pnl_pct.toFixed(1) + '%' : ''}</div>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }
     }
 
     function setSignalFilter(system) {

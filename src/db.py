@@ -174,6 +174,46 @@ _PG_SCHEMA_STMTS: list[str] = [
         FOREIGN KEY (signal_id) REFERENCES signals (id)
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS auto_settings (
+        key        TEXT PRIMARY KEY,
+        value      TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS auto_deposits (
+        id           SERIAL PRIMARY KEY,
+        deposit_date TEXT NOT NULL,
+        amount_qar   REAL NOT NULL,
+        amount_usd   REAL NOT NULL,
+        notes        TEXT,
+        created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS auto_trades (
+        id               SERIAL PRIMARY KEY,
+        signal_id        INTEGER,
+        system           TEXT NOT NULL,
+        ticker           TEXT NOT NULL,
+        shares           REAL NOT NULL,
+        remaining_shares REAL NOT NULL,
+        entry_date       TEXT NOT NULL,
+        entry_price      REAL NOT NULL,
+        stop_loss        REAL NOT NULL,
+        target_price     REAL NOT NULL,
+        status           TEXT DEFAULT 'OPEN',
+        exit_date        TEXT,
+        exit_price       REAL,
+        exit_reason      TEXT,
+        realized_pnl_usd REAL DEFAULT 0.0,
+        realized_pnl_pct REAL DEFAULT 0.0,
+        notes            TEXT,
+        created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (signal_id) REFERENCES signals (id)
+    )
+    """,
 ]
 
 _SQLITE_SCHEMA_STMTS: list[str] = [
@@ -231,6 +271,46 @@ _SQLITE_SCHEMA_STMTS: list[str] = [
         FOREIGN KEY (signal_id) REFERENCES signals (id)
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS auto_settings (
+        key        TEXT PRIMARY KEY,
+        value      TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS auto_deposits (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        deposit_date TEXT NOT NULL,
+        amount_qar   REAL NOT NULL,
+        amount_usd   REAL NOT NULL,
+        notes        TEXT,
+        created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS auto_trades (
+        id               INTEGER PRIMARY KEY AUTOINCREMENT,
+        signal_id        INTEGER,
+        system           TEXT NOT NULL,
+        ticker           TEXT NOT NULL,
+        shares           REAL NOT NULL,
+        remaining_shares REAL NOT NULL,
+        entry_date       TEXT NOT NULL,
+        entry_price      REAL NOT NULL,
+        stop_loss        REAL NOT NULL,
+        target_price     REAL NOT NULL,
+        status           TEXT DEFAULT 'OPEN',
+        exit_date        TEXT,
+        exit_price       REAL,
+        exit_reason      TEXT,
+        realized_pnl_usd REAL DEFAULT 0.0,
+        realized_pnl_pct REAL DEFAULT 0.0,
+        notes            TEXT,
+        created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (signal_id) REFERENCES signals (id)
+    )
+    """,
 ]
 
 
@@ -251,6 +331,19 @@ def init_db(db_path: Optional[Path] = None):
         cur.execute(
             "INSERT INTO settings (key, value) VALUES ('total_capital', '10000.0')"
         )
+
+    # Seed auto portfolio settings
+    auto_defaults = [
+        ("auto_initial_capital_qar", "20000.0"),
+        ("auto_monthly_deposit_qar", "5000.0"),
+        ("auto_risk_per_trade_pct", "1.5"),
+        ("auto_max_positions", "4"),
+        ("auto_start_date", "2026-09-08"),
+    ]
+    for k, v in auto_defaults:
+        cur.execute("SELECT value FROM auto_settings WHERE key = ?", (k,))
+        if cur.fetchone() is None:
+            cur.execute("INSERT INTO auto_settings (key, value) VALUES (?, ?)", (k, v))
 
     conn.commit()
     conn.close()
