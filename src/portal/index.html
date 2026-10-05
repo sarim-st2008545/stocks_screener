@@ -648,6 +648,9 @@
               <span class="text-slate-500 text-[11px]">QAR Equivalent:</span>
               <span id="auto-total-equity-qar" class="font-bold mono text-purple-300 text-xs">42,563.50 QAR</span>
             </div>
+            <div class="text-[10px] text-slate-400 mono pt-0.5">
+              <span id="auto-equity-subtext">25,000 QAR Inflows + 17,563 QAR Trading Gains</span>
+            </div>
           </div>
 
           <!-- Card 2: Net Profit (Realized + Floating) -->
@@ -754,6 +757,202 @@
               </tbody>
             </table>
           </div>
+        </div>
+
+        <!-- ================================================================= -->
+        <!-- CONFIGURABLE FUTURE INJECTIONS SIMULATOR -->
+        <!-- ================================================================= -->
+        <div class="glass-card rounded-2xl overflow-hidden shadow-2xl border border-purple-500/30 space-y-6 p-6">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border/80">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xl">🔮</span>
+                <h3 class="text-base font-extrabold text-white uppercase tracking-wider">Future Capital Injections Simulator</h3>
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-purple-950 text-purple-300 border border-purple-700">SCALE PROJECTION</span>
+              </div>
+              <p class="text-xs text-slate-400 mt-1">
+                Forward-testing model: preview the compounding impact of regular salary inflows (+5,000 QAR/mo) plus planned lump-sum injections (+15 Lakh PKR & +1 Crore PKR) across a 24-month horizon.
+              </p>
+            </div>
+            <!-- Live FX Reference -->
+            <div class="flex items-center gap-2 bg-surface/80 px-3 py-1.5 rounded-xl border border-border text-[11px] mono text-slate-300">
+              <span class="text-slate-500">FX Rates:</span>
+              <span class="text-cyan-400 font-bold">$1 = 3.64 QAR</span>
+              <span class="text-slate-600">|</span>
+              <span class="text-emerald-400 font-bold">$1 = 278.50 PKR</span>
+            </div>
+          </div>
+
+          <!-- Controls Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Starting Base -->
+            <div class="bg-surface/50 p-4 rounded-xl border border-border/80 space-y-2">
+              <label class="text-[11px] uppercase font-bold text-slate-400 block tracking-wider">Starting Capital Base</label>
+              <div class="grid grid-cols-2 gap-2">
+                <button type="button" id="sim-start-live" onclick="setSimStartBase('live')" class="px-3 py-2 rounded-lg text-xs font-bold bg-purple-600 text-white border border-purple-500 cursor-pointer shadow">Live Equity</button>
+                <button type="button" id="sim-start-fresh" onclick="setSimStartBase('fresh')" class="px-3 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-white bg-card border border-border cursor-pointer">Fresh 25k QAR</button>
+              </div>
+              <p id="sim-start-desc" class="text-[10px] text-slate-400 mono">Starting: $11,693 (42,564 QAR)</p>
+            </div>
+
+            <!-- Monthly Deposit (QAR) -->
+            <div class="bg-surface/50 p-4 rounded-xl border border-border/80 space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Monthly Inflow (QAR)</label>
+                <span id="sim-monthly-val" class="text-xs font-bold mono text-cyan-400">5,000 QAR</span>
+              </div>
+              <input type="range" id="sim-monthly-input" min="1000" max="20000" step="500" value="5000" oninput="runSimCalculation()" class="w-full accent-cyan-500 cursor-pointer">
+              <div class="flex items-center justify-between text-[10px] text-slate-500 mono">
+                <span>1,000 QAR</span>
+                <span class="text-slate-400">≈ $1,374 USD/mo</span>
+                <span>20,000 QAR</span>
+              </div>
+            </div>
+
+            <!-- Month 6 Injection (+15 Lakh PKR) -->
+            <div class="bg-surface/50 p-4 rounded-xl border border-border/80 space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Month 6 Injection</label>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="sim-toggle-m6" checked onchange="runSimCalculation()" class="sr-only peer">
+                  <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                </label>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold mono text-purple-300">+15 Lakh PKR</span>
+                <span class="text-[10px] text-slate-400 mono">(1.5M PKR)</span>
+              </div>
+              <p class="text-[10px] text-slate-400 mono">≈ $5,386 USD | 19,605 QAR</p>
+            </div>
+
+            <!-- Month 12 Injection (+1 Crore PKR) -->
+            <div class="bg-surface/50 p-4 rounded-xl border border-border/80 space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Month 12 Injection</label>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="sim-toggle-m12" checked onchange="runSimCalculation()" class="sr-only peer">
+                  <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold mono text-emerald-300">+1.0 Crore PKR</span>
+                <span class="text-[10px] text-slate-400 mono">(10M PKR)</span>
+              </div>
+              <p class="text-[10px] text-slate-400 mono">≈ $35,906 USD | 130,700 QAR</p>
+            </div>
+          </div>
+
+          <!-- Monthly Compounding Rate Slider -->
+          <div class="bg-surface/30 p-4 rounded-xl border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-white uppercase tracking-wider">Expected Monthly Trading Growth Rate:</span>
+                <span id="sim-rate-val" class="px-2 py-0.5 rounded text-xs font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">6.5% / month</span>
+              </div>
+              <p class="text-[11px] text-slate-400">Based on historical 58.9% win rate + 1.92 profit factor scaled with 1.5% Kelly risk parity.</p>
+            </div>
+            <div class="w-full sm:w-64 space-y-1">
+              <input type="range" id="sim-rate-input" min="2.0" max="12.0" step="0.5" value="6.5" oninput="runSimCalculation()" class="w-full accent-cyan-400 cursor-pointer">
+              <div class="flex justify-between text-[10px] text-slate-500 mono">
+                <span>Conservative (2%)</span>
+                <span>Base (6.5%)</span>
+                <span>Optimistic (12%)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Milestone Projection Cards Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+            <!-- M3 Card -->
+            <div class="p-4 rounded-xl bg-card border border-border space-y-1.5">
+              <div class="flex items-center justify-between text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                <span>Month 3 (Ramp-up)</span>
+                <span class="mono text-cyan-400">3 MO</span>
+              </div>
+              <div id="sim-m3-usd" class="text-xl font-extrabold mono text-white">$18,245</div>
+              <div id="sim-m3-qar" class="text-xs mono font-semibold text-purple-300">66,412 QAR</div>
+              <div id="sim-m3-pkr" class="text-[11px] mono text-slate-500">5.08M PKR</div>
+            </div>
+
+            <!-- M6 Card -->
+            <div class="p-4 rounded-xl bg-card border border-purple-500/40 space-y-1.5">
+              <div class="flex items-center justify-between text-[10px] uppercase font-bold text-purple-300 tracking-wider">
+                <span>Month 6 (+15L PKR)</span>
+                <span class="mono text-purple-400">⚡ INJECTION</span>
+              </div>
+              <div id="sim-m6-usd" class="text-xl font-extrabold mono text-white">$31,180</div>
+              <div id="sim-m6-qar" class="text-xs mono font-semibold text-purple-300">113,495 QAR</div>
+              <div id="sim-m6-pkr" class="text-[11px] mono text-slate-400">8.68M PKR</div>
+            </div>
+
+            <!-- M12 Card -->
+            <div class="p-4 rounded-xl bg-card border border-emerald-500/40 space-y-1.5">
+              <div class="flex items-center justify-between text-[10px] uppercase font-bold text-emerald-300 tracking-wider">
+                <span>Month 12 (+1Cr PKR)</span>
+                <span class="mono text-emerald-400">🏆 SCALE</span>
+              </div>
+              <div id="sim-m12-usd" class="text-xl font-extrabold mono text-emerald-400">$102,450</div>
+              <div id="sim-m12-qar" class="text-xs mono font-semibold text-emerald-300">372,918 QAR</div>
+              <div id="sim-m12-pkr" class="text-[11px] mono text-emerald-400 font-bold">2.85 Crore PKR</div>
+            </div>
+
+            <!-- M24 Card -->
+            <div class="p-4 rounded-xl bg-card border border-cyan-500/40 space-y-1.5">
+              <div class="flex items-center justify-between text-[10px] uppercase font-bold text-cyan-300 tracking-wider">
+                <span>Month 24 (2 Years)</span>
+                <span class="mono text-cyan-400">🚀 COMPOUND</span>
+              </div>
+              <div id="sim-m24-usd" class="text-xl font-extrabold mono text-cyan-400">$284,900</div>
+              <div id="sim-m24-qar" class="text-xs mono font-semibold text-cyan-300">1,037,036 QAR</div>
+              <div id="sim-m24-pkr" class="text-[11px] mono text-cyan-400 font-bold">7.93 Crore PKR</div>
+            </div>
+
+            <!-- Steady Monthly Income Card at M12 -->
+            <div class="p-4 rounded-xl bg-purple-950/40 border border-purple-700/60 space-y-1.5">
+              <div class="flex items-center justify-between text-[10px] uppercase font-bold text-purple-300 tracking-wider">
+                <span>Monthly Cash Flow</span>
+                <span class="mono text-purple-400">@ MONTH 12</span>
+              </div>
+              <div id="sim-cashflow-usd" class="text-xl font-extrabold mono text-purple-300">+$6,659/mo</div>
+              <div id="sim-cashflow-qar" class="text-xs mono font-semibold text-purple-200">+24,240 QAR/mo</div>
+              <div id="sim-cashflow-pkr" class="text-[11px] mono text-purple-300 font-bold">+18.5 Lakh PKR/mo</div>
+            </div>
+          </div>
+
+          <!-- Month-by-Month Compounding Breakdown Table (Collapsible) -->
+          <div class="border border-border/80 rounded-xl overflow-hidden bg-card/30">
+            <div class="px-5 py-3 bg-surface/60 border-b border-border/80 flex items-center justify-between cursor-pointer" onclick="toggleSimTable()">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-white uppercase tracking-wider">Month-by-Month Compounding Ledger (24 Months)</span>
+                <span class="text-[10px] text-slate-500 font-mono">Click to toggle full schedule</span>
+              </div>
+              <button type="button" id="sim-table-toggle-btn" class="text-xs text-cyan-400 font-bold flex items-center gap-1 cursor-pointer">
+                <span>View Full 24 Months</span>
+                <svg id="sim-table-chevron" class="w-3.5 h-3.5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </button>
+            </div>
+
+            <div id="sim-table-container" class="hidden overflow-x-auto max-h-96 overflow-y-auto">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="border-b border-border text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-card/40 sticky top-0 backdrop-blur-md">
+                    <th class="py-2.5 px-4">Month</th>
+                    <th class="py-2.5 px-3">Start Equity</th>
+                    <th class="py-2.5 px-3">Monthly Deposit</th>
+                    <th class="py-2.5 px-3">Lump Injection</th>
+                    <th class="py-2.5 px-3">Trading Profit</th>
+                    <th class="py-2.5 px-4 text-right">Ending USD</th>
+                    <th class="py-2.5 px-4 text-right">Ending QAR</th>
+                    <th class="py-2.5 px-4 text-right">Ending PKR</th>
+                  </tr>
+                </thead>
+                <tbody id="sim-table-tbody" class="divide-y divide-border/40 font-mono">
+                  <!-- Generated via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
         </div>
 
         <!-- Autonomous Trade Journal & Deposit Log -->
@@ -1206,6 +1405,13 @@
       const eqQar = document.getElementById('auto-total-equity-qar');
       if (eqQar) eqQar.textContent = `${(sum.total_equity_qar || 0).toLocaleString('en-US', {minimumFractionDigits: 2})} QAR`;
 
+      const eqSub = document.getElementById('auto-equity-subtext');
+      if (eqSub) {
+        const depQ = (sum.total_deposited_qar || 25000).toLocaleString('en-US', {maximumFractionDigits: 0});
+        const gainQ = (sum.net_profit_qar || 0).toLocaleString('en-US', {maximumFractionDigits: 0});
+        eqSub.textContent = `${depQ} QAR Inflows + ${gainQ} QAR Trading Gains`;
+      }
+
       const roiBadge = document.getElementById('auto-roi-badge');
       if (roiBadge) {
         const roi = sum.roi_pct || 0;
@@ -1371,6 +1577,195 @@
             `;
           }).join('');
         }
+      }
+
+      // Initialize simulator with latest portfolio equity
+      runSimCalculation();
+    }
+
+    // =========================================================================
+    // FUTURE CAPITAL INJECTIONS SIMULATOR
+    // =========================================================================
+    let simStartMode = 'live';
+
+    function setSimStartBase(mode) {
+      simStartMode = mode;
+      const liveBtn = document.getElementById('sim-start-live');
+      const freshBtn = document.getElementById('sim-start-fresh');
+      const desc = document.getElementById('sim-start-desc');
+      
+      const liveUsd = cachedAutoData && cachedAutoData.summary ? (cachedAutoData.summary.total_equity_usd || 11693.27) : 11693.27;
+      const liveQar = cachedAutoData && cachedAutoData.summary ? (cachedAutoData.summary.total_equity_qar || 42563.50) : 42563.50;
+
+      if (mode === 'live') {
+        if (liveBtn) liveBtn.className = 'px-3 py-2 rounded-lg text-xs font-bold bg-purple-600 text-white border border-purple-500 cursor-pointer shadow';
+        if (freshBtn) freshBtn.className = 'px-3 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-white bg-card border border-border cursor-pointer';
+        if (desc) desc.textContent = `Starting: $${Math.round(liveUsd).toLocaleString()} (${Math.round(liveQar).toLocaleString()} QAR)`;
+      } else {
+        if (freshBtn) freshBtn.className = 'px-3 py-2 rounded-lg text-xs font-bold bg-purple-600 text-white border border-purple-500 cursor-pointer shadow';
+        if (liveBtn) liveBtn.className = 'px-3 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-white bg-card border border-border cursor-pointer';
+        if (desc) desc.textContent = 'Starting: $6,868 (25,000 QAR fresh)';
+      }
+      runSimCalculation();
+    }
+
+    function toggleSimTable() {
+      const container = document.getElementById('sim-table-container');
+      const chevron = document.getElementById('sim-table-chevron');
+      const btn = document.getElementById('sim-table-toggle-btn');
+      if (!container) return;
+      const isHidden = container.classList.contains('hidden');
+      if (isHidden) {
+        container.classList.remove('hidden');
+        if (chevron) chevron.classList.add('rotate-180');
+        if (btn) btn.firstElementChild.textContent = 'Hide Schedule';
+      } else {
+        container.classList.add('hidden');
+        if (chevron) chevron.classList.remove('rotate-180');
+        if (btn) btn.firstElementChild.textContent = 'View Full 24 Months';
+      }
+    }
+
+    function runSimCalculation() {
+      const monthlyQar = parseFloat(document.getElementById('sim-monthly-input')?.value || 5000);
+      const mValLabel = document.getElementById('sim-monthly-val');
+      if (mValLabel) mValLabel.textContent = `${monthlyQar.toLocaleString()} QAR`;
+
+      const monthlyRatePct = parseFloat(document.getElementById('sim-rate-input')?.value || 6.5);
+      const rateValLabel = document.getElementById('sim-rate-val');
+      if (rateValLabel) rateValLabel.textContent = `${monthlyRatePct.toFixed(1)}% / month`;
+
+      const includeM6 = document.getElementById('sim-toggle-m6')?.checked ?? true;
+      const includeM12 = document.getElementById('sim-toggle-m12')?.checked ?? true;
+
+      const USD_TO_QAR = 3.64;
+      const USD_TO_PKR = 278.50;
+
+      let liveUsd = 11693.27;
+      if (cachedAutoData && cachedAutoData.summary && cachedAutoData.summary.total_equity_usd) {
+        liveUsd = cachedAutoData.summary.total_equity_usd;
+      }
+      let capital = simStartMode === 'live' ? liveUsd : (25000 / USD_TO_QAR);
+
+      const monthlyDepositUsd = monthlyQar / USD_TO_QAR;
+      const m6InjectionUsd = 1500000 / USD_TO_PKR; // ~5,385.99 USD (15 Lakh PKR)
+      const m12InjectionUsd = 10000000 / USD_TO_PKR; // ~35,906.64 USD (1 Crore PKR)
+
+      const schedule = [];
+
+      for (let m = 1; m <= 24; m++) {
+        const startEq = capital;
+        let lumpInjection = 0;
+        let milestoneTag = '';
+
+        if (m === 6 && includeM6) {
+          lumpInjection = m6InjectionUsd;
+          milestoneTag = '⚡ +15L PKR';
+        }
+        if (m === 12 && includeM12) {
+          lumpInjection = m12InjectionUsd;
+          milestoneTag = '🏆 +1Cr PKR';
+        }
+
+        const baseForProfit = startEq + monthlyDepositUsd + lumpInjection;
+        const profit = baseForProfit * (monthlyRatePct / 100);
+        capital = baseForProfit + profit;
+
+        schedule.push({
+          month: m,
+          startUsd: startEq,
+          depositUsd: monthlyDepositUsd,
+          depositQar: monthlyQar,
+          lumpUsd: lumpInjection,
+          milestone: milestoneTag,
+          profitUsd: profit,
+          endUsd: capital,
+          endQar: capital * USD_TO_QAR,
+          endPkr: capital * USD_TO_PKR
+        });
+      }
+
+      const fmtUsd = val => `$${Math.round(val).toLocaleString()}`;
+      const fmtQar = val => `${Math.round(val).toLocaleString()} QAR`;
+      const fmtPkr = val => {
+        if (val >= 10000000) {
+          return `${(val / 10000000).toFixed(2)} Crore PKR`;
+        }
+        return `${(val / 100000).toFixed(2)} Lakh PKR`;
+      };
+
+      const m3 = schedule[2];
+      const m6 = schedule[5];
+      const m12 = schedule[11];
+      const m24 = schedule[23];
+
+      const m3Usd = document.getElementById('sim-m3-usd');
+      if (m3Usd && m3) {
+        m3Usd.textContent = fmtUsd(m3.endUsd);
+        const m3Q = document.getElementById('sim-m3-qar');
+        if (m3Q) m3Q.textContent = fmtQar(m3.endQar);
+        const m3P = document.getElementById('sim-m3-pkr');
+        if (m3P) m3P.textContent = fmtPkr(m3.endPkr);
+      }
+
+      const m6Usd = document.getElementById('sim-m6-usd');
+      if (m6Usd && m6) {
+        m6Usd.textContent = fmtUsd(m6.endUsd);
+        const m6Q = document.getElementById('sim-m6-qar');
+        if (m6Q) m6Q.textContent = fmtQar(m6.endQar);
+        const m6P = document.getElementById('sim-m6-pkr');
+        if (m6P) m6P.textContent = fmtPkr(m6.endPkr);
+      }
+
+      const m12Usd = document.getElementById('sim-m12-usd');
+      if (m12Usd && m12) {
+        m12Usd.textContent = fmtUsd(m12.endUsd);
+        const m12Q = document.getElementById('sim-m12-qar');
+        if (m12Q) m12Q.textContent = fmtQar(m12.endQar);
+        const m12P = document.getElementById('sim-m12-pkr');
+        if (m12P) m12P.textContent = fmtPkr(m12.endPkr);
+
+        const m12CashflowUsd = m12.endUsd * (monthlyRatePct / 100);
+        const cfUsd = document.getElementById('sim-cashflow-usd');
+        if (cfUsd) cfUsd.textContent = `+${fmtUsd(m12CashflowUsd)}/mo`;
+        const cfQar = document.getElementById('sim-cashflow-qar');
+        if (cfQar) cfQar.textContent = `+${fmtQar(m12CashflowUsd * USD_TO_QAR)}/mo`;
+        const cfPkr = document.getElementById('sim-cashflow-pkr');
+        if (cfPkr) cfPkr.textContent = `+${fmtPkr(m12CashflowUsd * USD_TO_PKR)}/mo`;
+      }
+
+      const m24Usd = document.getElementById('sim-m24-usd');
+      if (m24Usd && m24) {
+        m24Usd.textContent = fmtUsd(m24.endUsd);
+        const m24Q = document.getElementById('sim-m24-qar');
+        if (m24Q) m24Q.textContent = fmtQar(m24.endQar);
+        const m24P = document.getElementById('sim-m24-pkr');
+        if (m24P) m24P.textContent = fmtPkr(m24.endPkr);
+      }
+
+      const tbody = document.getElementById('sim-table-tbody');
+      if (tbody) {
+        tbody.innerHTML = schedule.map(row => {
+          const isM6 = row.month === 6 && includeM6;
+          const isM12 = row.month === 12 && includeM12;
+          const rowBg = isM12 ? 'bg-emerald-950/30 font-bold' : (isM6 ? 'bg-purple-950/30 font-semibold' : 'hover:bg-surface/50');
+          const lumpDisplay = row.lumpUsd > 0
+            ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold ${isM12 ? 'bg-emerald-900 text-emerald-200 border border-emerald-700' : 'bg-purple-900 text-purple-200 border border-purple-700'}">${row.milestone} (+${fmtUsd(row.lumpUsd)})</span>`
+            : '<span class="text-slate-600">--</span>';
+
+          return `
+            <tr class="${rowBg} transition-colors border-b border-border/30">
+              <td class="py-2.5 px-4 font-bold text-white">Month ${row.month}</td>
+              <td class="py-2.5 px-3 text-slate-300">${fmtUsd(row.startUsd)}</td>
+              <td class="py-2.5 px-3 text-cyan-400">+${fmtUsd(row.depositUsd)} <span class="text-[10px] text-slate-500 font-normal">(${fmtQar(row.depositQar)})</span></td>
+              <td class="py-2.5 px-3">${lumpDisplay}</td>
+              <td class="py-2.5 px-3 text-emerald-400">+${fmtUsd(row.profitUsd)}</td>
+              <td class="py-2.5 px-4 text-right text-white font-bold">${fmtUsd(row.endUsd)}</td>
+              <td class="py-2.5 px-4 text-right text-purple-300 font-semibold">${fmtQar(row.endQar)}</td>
+              <td class="py-2.5 px-4 text-right text-slate-400">${fmtPkr(row.endPkr)}</td>
+            </tr>
+          `;
+        }).join('');
       }
     }
 
