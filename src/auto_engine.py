@@ -127,14 +127,14 @@ def replay_history() -> dict[str, Any]:
     # 2. Fetch settings
     init_cap_qar = float(get_auto_setting("auto_initial_capital_qar", "20000.0"))
     monthly_dep_qar = float(get_auto_setting("auto_monthly_deposit_qar", "5000.0"))
-    start_date_str = get_auto_setting("auto_start_date", "2026-09-08")
+    start_date_str = get_auto_setting("auto_start_date", "2026-10-01")
     risk_pct = float(get_auto_setting("auto_risk_per_trade_pct", "1.5"))
 
-    # Initial deposit
+    # Initial deposit (October 2026 starting capital)
     init_usd = qar_to_usd(init_cap_qar)
     cur.execute("""
         INSERT INTO auto_deposits (deposit_date, amount_qar, amount_usd, notes)
-        VALUES (?, ?, ?, 'Initial Account Opening Balance (20,000 QAR)')
+        VALUES (?, ?, ?, 'Initial Account Opening Balance - October 2026 (20,000 QAR)')
     """, (start_date_str, init_cap_qar, init_usd))
     conn.commit()
 
@@ -142,14 +142,14 @@ def replay_history() -> dict[str, Any]:
     total_deposits_usd = init_usd
     total_deposits_qar = init_cap_qar
 
-    # Track processed months for recurring salary additions
+    # Track processed months for recurring salary additions (October already funded; next is Nov 1)
     processed_months = {start_date_str[:7]}
 
     # 3. Load price histories for forward bar simulation
     cached_prices = records.load_all_cached_price_histories()
 
-    # 4. Fetch all signals sorted chronologically
-    cur.execute("SELECT * FROM signals ORDER BY signal_date ASC, id ASC")
+    # 4. Fetch all signals on or after start date sorted chronologically
+    cur.execute("SELECT * FROM signals WHERE signal_date >= ? ORDER BY signal_date ASC, id ASC", (start_date_str,))
     signals = [dict(r) for r in cur.fetchall()]
 
     active_trades: list[dict[str, Any]] = []
