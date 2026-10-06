@@ -733,8 +733,14 @@
               <h3 class="text-sm font-bold text-white uppercase tracking-wider">Active Automated Positions</h3>
               <span id="auto-active-positions-badge" class="px-2 py-0.5 rounded-full bg-purple-950 text-purple-300 text-[10px] mono font-bold border border-purple-800">4 Open</span>
             </div>
-            <div class="text-xs text-slate-400 mono">
-              <span>Deployed: </span><span id="auto-deployed-summary" class="font-bold text-white">$4,387.42 (15,970 QAR)</span>
+            <div class="flex items-center gap-4 text-xs mono">
+              <div class="text-slate-400">
+                <span>Deployed: </span><span id="auto-deployed-summary" class="font-bold text-white">$4,387.42 (15,970 QAR)</span>
+              </div>
+              <div class="h-3 w-px bg-border"></div>
+              <div class="text-slate-400">
+                <span>Floating P&L: </span><span id="auto-floating-summary" class="font-bold text-emerald-400">+$0.00 (+0 QAR)</span>
+              </div>
             </div>
           </div>
 
@@ -1454,6 +1460,16 @@
       const depSum = document.getElementById('auto-deployed-summary');
       if (depSum) depSum.textContent = `$${(sum.deployed_capital_usd || 0).toFixed(2)} (${(sum.deployed_capital_qar || 0).toFixed(0)} QAR)`;
 
+      const floatSum = document.getElementById('auto-floating-summary');
+      if (floatSum) {
+        const fUsd = sum.unrealized_pnl_usd || 0;
+        const fQar = sum.unrealized_pnl_qar || 0;
+        const isFWin = fUsd >= 0;
+        const fSign = isFWin ? '+' : '';
+        floatSum.textContent = `${fSign}$${fUsd.toFixed(2)} (${fSign}${fQar.toFixed(0)} QAR)`;
+        floatSum.className = `font-bold ${isFWin ? 'text-emerald-400' : 'text-rose-400'}`;
+      }
+
       const realSum = document.getElementById('auto-realized-summary');
       if (realSum) realSum.textContent = `+$${(sum.realized_pnl_usd || 0).toFixed(2)} (${(sum.realized_pnl_qar || 0).toFixed(0)} QAR)`;
 
@@ -1497,8 +1513,8 @@
                   <div class="mt-1">${statusBadge}</div>
                 </td>
                 <td class="py-4 px-4 mono text-xs">
-                  <div class="text-white font-bold">${p.remaining_shares} <span class="text-[10px] text-slate-400 font-normal">shares</span></div>
-                  <div class="text-slate-400 text-[11px]">$${p.cost_basis_usd.toFixed(2)} (${p.cost_basis_qar.toFixed(0)} QAR)</div>
+                  <div class="text-white font-extrabold text-base leading-tight">${p.remaining_shares} <span class="text-xs text-slate-400 font-semibold">shs</span></div>
+                  <div class="text-slate-400 text-[11px] mt-0.5">$${p.cost_basis_usd.toFixed(2)} (${p.cost_basis_qar.toFixed(0)} QAR)</div>
                 </td>
                 <td class="py-4 px-4 mono text-xs">
                   <div class="text-white font-bold">$${p.entry_price.toFixed(2)}</div>
