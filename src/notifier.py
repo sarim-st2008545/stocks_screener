@@ -86,15 +86,45 @@ def format_signal_alert(sig: dict[str, Any], system: str = "galaxy", scan_date: 
     sys_tag = "GALAXY v2 (3-4D)" if is_galaxy else "UNIVERSE SWING (2-5W)"
     sys_icon = "⚡" if is_galaxy else "🚀"
 
+    # Layer 2 Priority resolution
+    meta = sig.get("metadata")
+    if isinstance(meta, str):
+        try:
+            import json
+            meta = json.loads(meta)
+        except Exception:
+            meta = {}
+    elif not isinstance(meta, dict):
+        meta = {}
+
+    priority_rank = sig.get("priority_rank") or meta.get("priority_rank")
+    rs_63 = sig.get("rs_63") if sig.get("rs_63") is not None else meta.get("rs_63")
+    bench = sig.get("bench") or meta.get("bench")
+
     lines = [
         f"{sys_icon} *AURA QUANT SETUP ALERT*",
         f"━━━━━━━━━━━━━━━━━━━━━",
         f"*{ticker}* • `{sys_tag}`",
     ]
+
+    if not is_galaxy and priority_rank:
+        if priority_rank == 1:
+            lines.append("⭐ *PRIORITY #1 • HIGH ALPHA LEADER*")
+        elif priority_rank == 2:
+            lines.append("🔹 *PRIORITY #2*")
+        else:
+            lines.append(f"▫️ *PRIORITY #{priority_rank}*")
+
     if scan_date:
         lines.append(f"📅 *Date:* `{scan_date}`")
     if segment:
         lines.append(f"Sector: _{segment}_")
+
+    if not is_galaxy and rs_63 is not None:
+        bench_str = f" vs {bench}" if bench else ""
+        rs_float = float(rs_63)
+        rs_sign = "+" if rs_float >= 0 else ""
+        lines.append(f"📊 *Relative Strength:* `{rs_sign}{rs_float:.1f}%{bench_str}`")
 
     lines.extend([
         f"Signal: *{signal_type}*",
@@ -139,13 +169,22 @@ def notify_scanner_results(
     )
     send_telegram_message(header)
 
-    # Individual setup cards
+    # Individual setup cards - Galaxy first
     for s in galaxy_setups:
         card = format_signal_alert(s, system="galaxy", scan_date=scan_date)
         if send_telegram_message(card):
             total_sent += 1
 
-    for s in universe_setups:
+    # Universe setups sorted by Priority #1 first
+    def _u_rank(x):
+        r = x.get("priority_rank")
+        if r is None and isinstance(x.get("metadata"), dict):
+            r = x["metadata"].get("priority_rank")
+        rs = x.get("rs_63") or 0.0
+        return (0 if r == 1 else (r if r is not None else 999), -float(rs))
+
+    sorted_universe = sorted(universe_setups, key=_u_rank)
+    for s in sorted_universe:
         card = format_signal_alert(s, system="universe", scan_date=scan_date)
         if send_telegram_message(card):
             total_sent += 1

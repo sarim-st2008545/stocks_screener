@@ -177,6 +177,18 @@ def run_daily_scan(refresh: bool = False, min_rr: float = 1.5):
                 "bench": bench_sym,
             })
 
+    # Layer 2: Setup Prioritization (Rank by Relative Strength vs Benchmark)
+    if setups:
+        setups.sort(key=lambda x: x.get('rs_63', 0.0), reverse=True)
+        for idx, s in enumerate(setups, 1):
+            s['priority_rank'] = idx
+            if idx == 1:
+                s['priority_label'] = "⭐ Priority #1 (High Alpha)"
+            elif idx == 2:
+                s['priority_label'] = "Priority #2"
+            else:
+                s['priority_label'] = f"Priority #{idx}"
+
     # Record setups to database
     if setups:
         rec_count = records.record_scanner_signals("universe", setups, scan_date=str(data_date))
@@ -185,10 +197,11 @@ def run_daily_scan(refresh: bool = False, min_rr: float = 1.5):
     # Print results
     print(f"\n{'=' * 78}")
     if setups:
-        print(f"  🎯 ACTIVE TRADE SETUPS TRIGGERED TODAY ({len(setups)})")
+        print(f"  🎯 ACTIVE TRADE SETUPS TRIGGERED TODAY ({len(setups)}) - LAYER 2 PRIORITIZED")
         print(f"{'=' * 78}")
-        for s in sorted(setups, key=lambda x: x['rr'], reverse=True):
-            print(f"\n  🚀 ${s['ticker']}  [{s['segment']} | {s['tier']}]")
+        for s in setups:
+            print(f"\n  🚀 ${s['ticker']}  [{s['priority_label']} | {s['segment']} | {s['tier']}]")
+            print(f"     Priority:     Rank #{s['priority_rank']} (63d RS vs {s['bench']}: +{s['rs_63']:.1f}%)")
             print(f"     Trigger:      {s['signal']}")
             print(f"     Market Close: ${s['price']:.2f} (Entry: Next Day Open)")
             print(f"     Stop Loss:    ${s['stop']:.2f}  (-{s['stop_pct']:.1f}%)  [1.5x ATR Volatility Floor / Structural Support]")

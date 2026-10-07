@@ -260,8 +260,23 @@ def replay_history() -> dict[str, Any]:
 
         active_trades = still_open
 
-        # Evaluate new setups on dt_str
-        days_signals = signals_by_date[dt_str]
+        # Evaluate new setups on dt_str (Layer 2: Prioritized by Rank & Relative Strength)
+        def _get_sig_priority(sig):
+            meta = sig.get("metadata")
+            if isinstance(meta, str):
+                try:
+                    meta = json.loads(meta)
+                except Exception:
+                    meta = {}
+            elif not isinstance(meta, dict):
+                meta = {}
+            rank = sig.get("priority_rank") or meta.get("priority_rank")
+            rs = sig.get("rs_63") if sig.get("rs_63") is not None else meta.get("rs_63")
+            rs_val = float(rs) if rs is not None else 0.0
+            rank_val = 0 if rank == 1 else (rank if rank is not None else 999)
+            return (rank_val, -rs_val)
+
+        days_signals = sorted(signals_by_date[dt_str], key=_get_sig_priority)
         for s in days_signals:
             if len(active_trades) >= 4:
                 break  # Max concurrent positions reached
@@ -329,8 +344,12 @@ def replay_history() -> dict[str, Any]:
             round(t["realized_pnl_usd"], 2), round(t["realized_pnl_pct"], 2), t["notes"]
         ))
 
-    # Persist updated auto cash setting
-    set_auto_setting("auto_cash_available_usd", str(round(cash_usd, 2)))
+    # Persist updated auto cash setting directly on current transaction
+    cur.execute("""
+        INSERT INTO auto_settings (key, value, updated_at)
+        VALUES ('auto_cash_available_usd', ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP
+    """, (str(round(cash_usd, 2)),))
     conn.commit()
     conn.close()
 

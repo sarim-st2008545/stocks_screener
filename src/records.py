@@ -33,6 +33,62 @@ def get_connection(db_path: Optional[Path] = None):
 def init_db(db_path: Optional[Path] = None):
     """Initializes the database tables (delegates to db module)."""
     db.init_db(db_path)
+    if get_setting("priorities_backfilled_v1", "", db_path=db_path) != "1":
+        try:
+            backfill_signal_priorities(db_path=db_path)
+            set_setting("priorities_backfilled_v1", "1", db_path=db_path)
+        except Exception:
+            pass
+
+
+def backfill_signal_priorities(db_path: Optional[Path] = None) -> int:
+    """
+    Ensures all existing Universe signals have Layer 2 priority rankings
+    and relative strength persisted in metadata.
+    """
+    conn = get_connection(db_path)
+    cur = conn.cursor()
+    cur.execute("SELECT id, signal_date, system, ticker, metadata FROM signals WHERE system = 'universe'")
+    rows = [dict(r) for r in cur.fetchall()]
+    if not rows:
+        conn.close()
+        return 0
+
+    by_date: dict[str, list[dict[str, Any]]] = {}
+    for r in rows:
+        by_date.setdefault(r["signal_date"], []).append(r)
+
+    updated_count = 0
+    for d, sigs in by_date.items():
+        for s in sigs:
+            meta = s.get("metadata")
+            if isinstance(meta, str):
+                try:
+                    meta = json.loads(meta)
+                except Exception:
+                    meta = {}
+            elif not isinstance(meta, dict):
+                meta = {}
+            s["meta"] = meta
+            s["rs"] = float(meta.get("rs_63") or 0.0)
+
+        sigs.sort(key=lambda x: x["rs"], reverse=True)
+        for rank, s in enumerate(sigs, 1):
+            meta = s["meta"]
+            meta["priority_rank"] = rank
+            if rank == 1:
+                meta["priority_label"] = "⭐ Priority #1 (High Alpha)"
+            elif rank == 2:
+                meta["priority_label"] = "Priority #2"
+            else:
+                meta["priority_label"] = f"Priority #{rank}"
+
+            cur.execute("UPDATE signals SET metadata = ? WHERE id = ?", (json.dumps(meta), s["id"]))
+            updated_count += 1
+
+    conn.commit()
+    conn.close()
+    return updated_count
 
 
 
@@ -379,9 +435,18 @@ def get_signals_grouped_by_date(
         item = dict(r)
         if item.get("metadata"):
             try:
-                item["metadata"] = json.loads(item["metadata"])
+                if isinstance(item["metadata"], str):
+                    item["metadata"] = json.loads(item["metadata"])
             except Exception:
                 pass
+
+        if isinstance(item.get("metadata"), dict):
+            meta = item["metadata"]
+            item["priority_rank"] = meta.get("priority_rank")
+            item["priority_label"] = meta.get("priority_label")
+            item["rs_63"] = meta.get("rs_63")
+            item["bench"] = meta.get("bench")
+            item["tier"] = meta.get("tier")
 
         ticker = item["ticker"].upper()
         sig_id = item.get("id")
@@ -434,6 +499,17 @@ def get_signals_grouped_by_date(
         item["price_diff"] = item["hypothetical_pnl_dollar"]
         item["shares"] = 1
         grouped[d_str].append(item)
+
+    # Sort each date's setups so Priority #1 is at top
+    for d_str in grouped:
+        def _sig_sort_key(x):
+            is_gal = x.get("system") == "galaxy"
+            rank = x.get("priority_rank")
+            rank_val = 0 if rank == 1 else (rank if rank is not None else (50 if is_gal else 999))
+            rs_val = float(x.get("rs_63") or 0.0)
+            return (rank_val, -rs_val)
+
+        grouped[d_str].sort(key=_sig_sort_key)
 
     return grouped
 

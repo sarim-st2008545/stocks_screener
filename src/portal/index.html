@@ -2066,7 +2066,18 @@
       }
 
       feed.innerHTML = dates.map(dateStr => {
-        const list = grouped[dateStr];
+        let list = grouped[dateStr] || [];
+        // Ensure priority #1 is at top of the date group
+        list = [...list].sort((a, b) => {
+          const metaA = typeof a.metadata === 'object' && a.metadata !== null ? a.metadata : {};
+          const metaB = typeof b.metadata === 'object' && b.metadata !== null ? b.metadata : {};
+          const rankA = a.priority_rank !== undefined && a.priority_rank !== null ? Number(a.priority_rank) : (metaA.priority_rank !== undefined && metaA.priority_rank !== null ? Number(metaA.priority_rank) : 999);
+          const rankB = b.priority_rank !== undefined && b.priority_rank !== null ? Number(b.priority_rank) : (metaB.priority_rank !== undefined && metaB.priority_rank !== null ? Number(metaB.priority_rank) : 999);
+          if (rankA !== rankB) return rankA - rankB;
+          const rsA = a.rs_63 !== undefined && a.rs_63 !== null ? Number(a.rs_63) : (metaA.rs_63 !== undefined ? Number(metaA.rs_63) : 0);
+          const rsB = b.rs_63 !== undefined && b.rs_63 !== null ? Number(b.rs_63) : (metaB.rs_63 !== undefined ? Number(metaB.rs_63) : 0);
+          return rsB - rsA;
+        });
         return `
           <div class="glass-card rounded-xl overflow-hidden shadow-xl space-y-2">
             <div class="px-5 py-3.5 border-b border-border bg-card/50 flex flex-wrap items-center justify-between gap-2">
@@ -2076,14 +2087,14 @@
                 </span>
                 <span class="text-xs text-slate-400 font-medium">${list.length} setup(s) generated</span>
               </div>
-              <div class="text-[11px] text-slate-500 mono">Tracking all setups live regardless of execution</div>
+              <div class="text-[11px] text-slate-500 mono">Layer 2 setups prioritized by Relative Strength momentum</div>
             </div>
 
             <div class="overflow-x-auto">
               <table class="w-full text-left border-collapse">
                 <thead>
                   <tr class="border-b border-border/80 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-card/20">
-                    <th class="py-3 px-5">Ticker / System</th>
+                    <th class="py-3 px-5">Ticker / System / Priority</th>
                     <th class="py-3 px-3">Setup Trigger</th>
                     <th class="py-3 px-3">Trigger Price</th>
                     <th class="py-3 px-3">Live Price</th>
@@ -2109,6 +2120,30 @@
       const badge = isGalaxy 
         ? '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-cyan-950 text-cyan-400 border border-cyan-800/80 mono">GALAXY v2</span>'
         : '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-purple-950 text-purple-400 border border-purple-800/80 mono">UNIVERSE</span>';
+
+      // Layer 2 Priority resolution
+      let meta = {};
+      if (typeof s.metadata === 'object' && s.metadata !== null) {
+        meta = s.metadata;
+      } else if (typeof s.metadata === 'string') {
+        try { meta = JSON.parse(s.metadata); } catch(e) { meta = {}; }
+      }
+
+      const pRank = s.priority_rank !== undefined && s.priority_rank !== null ? Number(s.priority_rank) : (meta.priority_rank !== undefined && meta.priority_rank !== null ? Number(meta.priority_rank) : null);
+      const rsVal = s.rs_63 !== undefined && s.rs_63 !== null ? Number(s.rs_63) : (meta.rs_63 !== undefined && meta.rs_63 !== null ? Number(meta.rs_63) : null);
+      const bench = s.bench || meta.bench || '';
+
+      let priorityBadge = '';
+      if (!isGalaxy && pRank !== null && pRank > 0) {
+        const rsTxt = rsVal !== null ? ` (RS ${rsVal >= 0 ? '+' : ''}${rsVal.toFixed(1)}%)` : '';
+        if (pRank === 1) {
+          priorityBadge = `<span class="px-2 py-0.5 rounded text-[9px] font-extrabold bg-gradient-to-r from-amber-500/25 via-yellow-500/15 to-amber-600/20 text-amber-300 border border-amber-500/60 mono tracking-wider shadow-sm flex items-center gap-1"><span class="text-amber-400">⭐</span>PRIORITY #1${rsTxt}</span>`;
+        } else if (pRank === 2) {
+          priorityBadge = `<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-blue-950/80 text-blue-300 border border-blue-700/60 mono tracking-wider flex items-center gap-1">PRIORITY #2${rsTxt}</span>`;
+        } else {
+          priorityBadge = `<span class="px-2 py-0.5 rounded text-[9px] font-medium bg-slate-800/80 text-slate-400 border border-slate-700 mono tracking-wider">PRIORITY #${pRank}${rsTxt}</span>`;
+        }
+      }
 
       const pnlPct = s.outcome_pnl_pct !== null && s.outcome_pnl_pct !== undefined ? Number(s.outcome_pnl_pct) : 0.0;
       const isPositive = pnlPct > 0.001;
@@ -2193,13 +2228,14 @@
             <div class="flex items-center gap-2 flex-wrap">
               <span class="font-extrabold text-white mono text-sm">${s.ticker}</span>
               ${badge}
+              ${priorityBadge}
               ${tradedBadge}
             </div>
             <div class="text-[10px] text-slate-400 truncate max-w-[130px]">${s.name || s.ticker}</div>
           </td>
           <td class="py-3 px-3">
             <div class="text-slate-200 font-semibold text-[11px]">${s.signal_type}</div>
-            <div class="text-[10px] text-slate-500">${s.segment || 'Core'}</div>
+            <div class="text-[10px] text-slate-500">${s.segment || 'Core'} ${bench && rsVal !== null ? `<span class="text-slate-400 mono">• RS vs ${bench}: ${rsVal >= 0 ? '+' : ''}${rsVal.toFixed(1)}%</span>` : ''}</div>
           </td>
           <td class="py-3 px-3 mono text-white font-bold">
             $${Number(s.price).toFixed(2)}
