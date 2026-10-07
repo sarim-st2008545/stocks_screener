@@ -1033,6 +1033,8 @@ def get_analytics_and_forecast(
             "system_expected_return_pct": round((total_system_expected_pnl / total_capital * 100.0), 2),
             "actual_trades_count": len(all_trades),
             "actual_win_rate": round(actual_win_rate, 1),
+            "actual_realized_pnl": round(actual_realized, 2),
+            "actual_unrealized_pnl": round(actual_unrealized, 2),
             "actual_total_pnl": round(total_actual_pnl, 2),
             "actual_return_pct": round((total_actual_pnl / total_capital * 100.0), 2),
             "capture_efficiency_pct": round(capture_efficiency, 1),

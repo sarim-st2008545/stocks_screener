@@ -421,14 +421,28 @@
           <!-- Actual Trader Banked Card -->
           <div class="glass-card p-5 rounded-xl border-l-4 border-emerald-500 space-y-3">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Trader Banked (Actual Trades)</span>
+              <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Trader Performance (Actual Trades)</span>
               <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 font-mono">Your Executions</span>
             </div>
-            <div class="flex items-baseline gap-2">
-              <span id="forecast-act-pnl" class="text-3xl font-extrabold mono text-white">$0.00</span>
-              <span id="forecast-act-ret" class="text-xs font-bold mono text-slate-400">+0.0%</span>
+            <div class="flex items-center justify-between gap-4">
+              <!-- Left: Realized Banked -->
+              <div>
+                <div class="text-[10px] text-slate-400 uppercase font-semibold">Realized Banked</div>
+                <div class="flex items-baseline gap-1.5 mt-0.5">
+                  <span id="forecast-act-pnl" class="text-2xl font-extrabold mono text-white">$0.00</span>
+                  <span id="forecast-act-ret" class="text-xs font-bold mono text-emerald-400">+0.0%</span>
+                </div>
+              </div>
+              <div class="h-10 w-px bg-border/80"></div>
+              <!-- Right: Floating Profit/Loss -->
+              <div class="text-right">
+                <div class="text-[10px] text-slate-400 uppercase font-semibold">Floating P&L</div>
+                <div class="flex items-baseline justify-end gap-1.5 mt-0.5">
+                  <span id="forecast-act-floating" class="text-2xl font-extrabold mono text-slate-300">$0.00</span>
+                </div>
+              </div>
             </div>
-            <p class="text-xs text-slate-400">Realized + floating profit from positions you personally opened.</p>
+            <p class="text-xs text-slate-400">Separate audit of banked cash gains versus currently open floating equity.</p>
             <div class="pt-2 border-t border-border flex items-center justify-between text-xs mono">
               <span class="text-slate-500">Trades Executed:</span>
               <span id="forecast-act-trades" class="font-bold text-white">1</span>
@@ -765,8 +779,41 @@
           </div>
         </div>
 
+        <!-- Autonomous Trade Journal & Deposit Log -->
+        <div class="glass-card rounded-2xl overflow-hidden shadow-xl space-y-3">
+          <div class="px-6 py-4 border-b border-border bg-card/40 flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-bold text-white uppercase tracking-wider">Autonomous Trade Journal & Inflows</h3>
+              <p class="text-xs text-slate-400 mt-0.5">Audit ledger of all automated entries, scaling exits, and monthly salary deposits.</p>
+            </div>
+            <div class="text-xs text-slate-400 mono">
+              <span>Realized Banked: </span><span id="auto-realized-summary" class="font-bold text-slate-300">$0.00 (0 QAR)</span>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-border/80 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-card/20">
+                  <th class="py-3 px-6">Ticker / Event</th>
+                  <th class="py-3 px-4">Shares</th>
+                  <th class="py-3 px-4">Entry / Action Date</th>
+                  <th class="py-3 px-4">Exit Price & Reason</th>
+                  <th class="py-3 px-4">Status</th>
+                  <th class="py-3 px-6 text-right">Realized Return</th>
+                </tr>
+              </thead>
+              <tbody id="auto-journal-tbody" class="divide-y divide-border/60 text-sm">
+                <tr>
+                  <td colspan="6" class="text-center py-12 text-slate-500">Loading autonomous journal...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- ================================================================= -->
-        <!-- CONFIGURABLE FUTURE INJECTIONS SIMULATOR -->
+        <!-- CONFIGURABLE FUTURE INJECTIONS SIMULATOR (MOVED TO BOTTOM) -->
         <!-- ================================================================= -->
         <div class="glass-card rounded-2xl overflow-hidden shadow-2xl border border-purple-500/30 space-y-6 p-6">
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border/80">
@@ -777,7 +824,7 @@
                 <span class="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-purple-950 text-purple-300 border border-purple-700">SCALE PROJECTION</span>
               </div>
               <p class="text-xs text-slate-400 mt-1">
-                Forward-testing model: preview the compounding impact of regular salary inflows (+5,000 QAR/mo) plus planned lump-sum injections (+15 Lakh PKR & +1 Crore PKR) across a 24-month horizon.
+                Forward-testing model: preview the compounding impact of custom starting capital, regular monthly inflows, and planned lump-sum injections across a 24-month horizon.
               </p>
             </div>
             <!-- Live FX Reference -->
@@ -791,31 +838,35 @@
 
           <!-- Controls Grid -->
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <!-- Starting Base -->
+            <!-- Starting Capital Base (Dynamic Input) -->
             <div class="bg-surface/50 p-4 rounded-xl border border-border/80 space-y-2">
-              <label class="text-[11px] uppercase font-bold text-slate-400 block tracking-wider">Starting Capital Base</label>
-              <div class="grid grid-cols-2 gap-2">
-                <button type="button" id="sim-start-live" onclick="setSimStartBase('live')" class="px-3 py-2 rounded-lg text-xs font-bold bg-purple-600 text-white border border-purple-500 cursor-pointer shadow">Live Equity</button>
-                <button type="button" id="sim-start-fresh" onclick="setSimStartBase('fresh')" class="px-3 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-white bg-card border border-border cursor-pointer">Fresh 20k QAR</button>
+              <div class="flex items-center justify-between">
+                <label class="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Starting Capital</label>
+                <button type="button" onclick="setSimStartBase('live')" class="text-[10px] text-cyan-400 hover:underline cursor-pointer mono font-semibold">Use Live</button>
               </div>
-              <p id="sim-start-desc" class="text-[10px] text-slate-400 mono">Starting: $5,495 (20,000 QAR)</p>
+              <div class="relative">
+                <input type="number" id="sim-start-capital-qar" value="20000" step="1000" min="1000" oninput="runSimCalculation()" class="w-full bg-card border border-border rounded-lg px-3 py-1.5 text-sm mono font-bold text-white focus:outline-none focus:border-purple-500">
+                <span class="absolute right-3 top-2 text-[11px] mono text-slate-400">QAR</span>
+              </div>
+              <p id="sim-start-desc" class="text-[10px] text-slate-400 mono">≈ $5,495 USD</p>
             </div>
 
             <!-- Monthly Deposit (QAR) -->
             <div class="bg-surface/50 p-4 rounded-xl border border-border/80 space-y-2">
               <div class="flex items-center justify-between">
-                <label class="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Monthly Inflow (QAR)</label>
+                <label class="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Monthly Inflow</label>
                 <span id="sim-monthly-val" class="text-xs font-bold mono text-cyan-400">5,000 QAR</span>
               </div>
-              <input type="range" id="sim-monthly-input" min="1000" max="20000" step="500" value="5000" oninput="runSimCalculation()" class="w-full accent-cyan-500 cursor-pointer">
+              <div class="relative">
+                <input type="number" id="sim-monthly-input" value="5000" step="500" min="0" oninput="runSimCalculation()" class="w-full bg-card border border-border rounded-lg px-3 py-1.5 text-sm mono font-bold text-white focus:outline-none focus:border-cyan-500">
+                <span class="absolute right-3 top-2 text-[11px] mono text-slate-400">QAR/mo</span>
+              </div>
               <div class="flex items-center justify-between text-[10px] text-slate-500 mono">
-                <span>1,000 QAR</span>
-                <span class="text-slate-400">≈ $1,374 USD/mo</span>
-                <span>20,000 QAR</span>
+                <span id="sim-monthly-usd-desc">≈ $1,374 USD/mo</span>
               </div>
             </div>
 
-            <!-- Month 6 Injection (+15 Lakh PKR) -->
+            <!-- Month 6 Injection (Dynamic Lakh PKR Input) -->
             <div class="bg-surface/50 p-4 rounded-xl border border-border/80 space-y-2">
               <div class="flex items-center justify-between">
                 <label class="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Month 6 Injection</label>
@@ -824,14 +875,14 @@
                   <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
                 </label>
               </div>
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-bold mono text-purple-300">+15 Lakh PKR</span>
-                <span class="text-[10px] text-slate-400 mono">(1.5M PKR)</span>
+              <div class="relative">
+                <input type="number" id="sim-m6-lakh-input" value="15" step="1" min="0" oninput="runSimCalculation()" class="w-full bg-card border border-border rounded-lg px-3 py-1.5 text-sm mono font-bold text-white focus:outline-none focus:border-purple-500">
+                <span class="absolute right-3 top-2 text-[11px] mono text-slate-400">Lakh PKR</span>
               </div>
-              <p class="text-[10px] text-slate-400 mono">≈ $5,386 USD | 19,605 QAR</p>
+              <p id="sim-m6-desc" class="text-[10px] text-slate-400 mono">≈ $5,386 USD | 19,605 QAR</p>
             </div>
 
-            <!-- Month 12 Injection (+1 Crore PKR) -->
+            <!-- Month 12 Injection (Dynamic Crore PKR Input) -->
             <div class="bg-surface/50 p-4 rounded-xl border border-border/80 space-y-2">
               <div class="flex items-center justify-between">
                 <label class="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Month 12 Injection</label>
@@ -840,11 +891,11 @@
                   <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
                 </label>
               </div>
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-bold mono text-emerald-300">+1.0 Crore PKR</span>
-                <span class="text-[10px] text-slate-400 mono">(10M PKR)</span>
+              <div class="relative">
+                <input type="number" id="sim-m12-crore-input" value="1.0" step="0.25" min="0" oninput="runSimCalculation()" class="w-full bg-card border border-border rounded-lg px-3 py-1.5 text-sm mono font-bold text-white focus:outline-none focus:border-emerald-500">
+                <span class="absolute right-3 top-2 text-[11px] mono text-slate-400">Crore PKR</span>
               </div>
-              <p class="text-[10px] text-slate-400 mono">≈ $35,906 USD | 130,700 QAR</p>
+              <p id="sim-m12-desc" class="text-[10px] text-slate-400 mono">≈ $35,906 USD | 130,700 QAR</p>
             </div>
           </div>
 
@@ -883,7 +934,7 @@
             <!-- M6 Card -->
             <div class="p-4 rounded-xl bg-card border border-purple-500/40 space-y-1.5">
               <div class="flex items-center justify-between text-[10px] uppercase font-bold text-purple-300 tracking-wider">
-                <span>Month 6 (+15L PKR)</span>
+                <span id="sim-m6-card-title">Month 6 (+15L PKR)</span>
                 <span class="mono text-purple-400">⚡ INJECTION</span>
               </div>
               <div id="sim-m6-usd" class="text-xl font-extrabold mono text-white">$31,180</div>
@@ -894,7 +945,7 @@
             <!-- M12 Card -->
             <div class="p-4 rounded-xl bg-card border border-emerald-500/40 space-y-1.5">
               <div class="flex items-center justify-between text-[10px] uppercase font-bold text-emerald-300 tracking-wider">
-                <span>Month 12 (+1Cr PKR)</span>
+                <span id="sim-m12-card-title">Month 12 (+1Cr PKR)</span>
                 <span class="mono text-emerald-400">🏆 SCALE</span>
               </div>
               <div id="sim-m12-usd" class="text-xl font-extrabold mono text-emerald-400">$102,450</div>
@@ -959,39 +1010,6 @@
             </div>
           </div>
 
-        </div>
-
-        <!-- Autonomous Trade Journal & Deposit Log -->
-        <div class="glass-card rounded-2xl overflow-hidden shadow-xl space-y-3">
-          <div class="px-6 py-4 border-b border-border bg-card/40 flex items-center justify-between">
-            <div>
-              <h3 class="text-sm font-bold text-white uppercase tracking-wider">Autonomous Trade Journal & Inflows</h3>
-              <p class="text-xs text-slate-400 mt-0.5">Audit ledger of all automated entries, scaling exits, and monthly salary deposits.</p>
-            </div>
-            <div class="text-xs text-slate-400 mono">
-              <span>Realized Banked: </span><span id="auto-realized-summary" class="font-bold text-slate-300">$0.00 (0 QAR)</span>
-            </div>
-          </div>
-
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-              <thead>
-                <tr class="border-b border-border/80 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-card/20">
-                  <th class="py-3 px-6">Ticker / Event</th>
-                  <th class="py-3 px-4">Shares</th>
-                  <th class="py-3 px-4">Entry / Action Date</th>
-                  <th class="py-3 px-4">Exit Price & Reason</th>
-                  <th class="py-3 px-4">Status</th>
-                  <th class="py-3 px-6 text-right">Realized Return</th>
-                </tr>
-              </thead>
-              <tbody id="auto-journal-tbody" class="divide-y divide-border/60 text-sm">
-                <tr>
-                  <td colspan="6" class="text-center py-12 text-slate-500">Loading autonomous journal...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
         </div>
 
       </section>
@@ -1602,25 +1620,13 @@
     // =========================================================================
     // FUTURE CAPITAL INJECTIONS SIMULATOR
     // =========================================================================
-    let simStartMode = 'live';
-
     function setSimStartBase(mode) {
-      simStartMode = mode;
-      const liveBtn = document.getElementById('sim-start-live');
-      const freshBtn = document.getElementById('sim-start-fresh');
-      const desc = document.getElementById('sim-start-desc');
-      
-      const liveUsd = cachedAutoData && cachedAutoData.summary ? (cachedAutoData.summary.total_equity_usd || 5494.51) : 5494.51;
-      const liveQar = cachedAutoData && cachedAutoData.summary ? (cachedAutoData.summary.total_equity_qar || 20000.00) : 20000.00;
-
-      if (mode === 'live') {
-        if (liveBtn) liveBtn.className = 'px-3 py-2 rounded-lg text-xs font-bold bg-purple-600 text-white border border-purple-500 cursor-pointer shadow';
-        if (freshBtn) freshBtn.className = 'px-3 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-white bg-card border border-border cursor-pointer';
-        if (desc) desc.textContent = `Starting: $${Math.round(liveUsd).toLocaleString()} (${Math.round(liveQar).toLocaleString()} QAR)`;
-      } else {
-        if (freshBtn) freshBtn.className = 'px-3 py-2 rounded-lg text-xs font-bold bg-purple-600 text-white border border-purple-500 cursor-pointer shadow';
-        if (liveBtn) liveBtn.className = 'px-3 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-white bg-card border border-border cursor-pointer';
-        if (desc) desc.textContent = 'Starting: $5,495 (20,000 QAR fresh)';
+      const startInput = document.getElementById('sim-start-capital-qar');
+      const liveQar = cachedAutoData && cachedAutoData.summary ? (cachedAutoData.summary.total_equity_qar || 20450.65) : 20450.65;
+      if (mode === 'live' && startInput) {
+        startInput.value = Math.round(liveQar);
+      } else if (startInput) {
+        startInput.value = 20000;
       }
       runSimCalculation();
     }
@@ -1643,30 +1649,51 @@
     }
 
     function runSimCalculation() {
+      const USD_TO_QAR = 3.64;
+      const USD_TO_PKR = 278.50;
+
+      // 1. Dynamic Starting Capital (QAR)
+      const startCapitalQar = parseFloat(document.getElementById('sim-start-capital-qar')?.value || 20000);
+      const startDesc = document.getElementById('sim-start-desc');
+      const startCapitalUsd = startCapitalQar / USD_TO_QAR;
+      if (startDesc) startDesc.textContent = `≈ $${Math.round(startCapitalUsd).toLocaleString()} USD`;
+
+      // 2. Dynamic Monthly Inflow (QAR)
       const monthlyQar = parseFloat(document.getElementById('sim-monthly-input')?.value || 5000);
       const mValLabel = document.getElementById('sim-monthly-val');
       if (mValLabel) mValLabel.textContent = `${monthlyQar.toLocaleString()} QAR`;
+      const monthlyDepositUsd = monthlyQar / USD_TO_QAR;
+      const mUsdDesc = document.getElementById('sim-monthly-usd-desc');
+      if (mUsdDesc) mUsdDesc.textContent = `≈ $${Math.round(monthlyDepositUsd).toLocaleString()} USD/mo`;
 
+      // 3. Dynamic Month 6 Injection (Lakh PKR)
+      const m6Lakh = parseFloat(document.getElementById('sim-m6-lakh-input')?.value || 0);
+      const includeM6 = document.getElementById('sim-toggle-m6')?.checked ?? true;
+      const m6Pkr = m6Lakh * 100000;
+      const m6InjectionUsd = m6Pkr / USD_TO_PKR;
+      const m6InjectionQar = m6InjectionUsd * USD_TO_QAR;
+      const m6Desc = document.getElementById('sim-m6-desc');
+      if (m6Desc) m6Desc.textContent = `≈ $${Math.round(m6InjectionUsd).toLocaleString()} USD | ${Math.round(m6InjectionQar).toLocaleString()} QAR`;
+      const m6CardTitle = document.getElementById('sim-m6-card-title');
+      if (m6CardTitle) m6CardTitle.textContent = `Month 6 (+${m6Lakh}L PKR)`;
+
+      // 4. Dynamic Month 12 Injection (Crore PKR)
+      const m12Crore = parseFloat(document.getElementById('sim-m12-crore-input')?.value || 0);
+      const includeM12 = document.getElementById('sim-toggle-m12')?.checked ?? true;
+      const m12Pkr = m12Crore * 10000000;
+      const m12InjectionUsd = m12Pkr / USD_TO_PKR;
+      const m12InjectionQar = m12InjectionUsd * USD_TO_QAR;
+      const m12Desc = document.getElementById('sim-m12-desc');
+      if (m12Desc) m12Desc.textContent = `≈ $${Math.round(m12InjectionUsd).toLocaleString()} USD | ${Math.round(m12InjectionQar).toLocaleString()} QAR`;
+      const m12CardTitle = document.getElementById('sim-m12-card-title');
+      if (m12CardTitle) m12CardTitle.textContent = `Month 12 (+${m12Crore}Cr PKR)`;
+
+      // 5. Compounding Growth Rate
       const monthlyRatePct = parseFloat(document.getElementById('sim-rate-input')?.value || 6.5);
       const rateValLabel = document.getElementById('sim-rate-val');
       if (rateValLabel) rateValLabel.textContent = `${monthlyRatePct.toFixed(1)}% / month`;
 
-      const includeM6 = document.getElementById('sim-toggle-m6')?.checked ?? true;
-      const includeM12 = document.getElementById('sim-toggle-m12')?.checked ?? true;
-
-      const USD_TO_QAR = 3.64;
-      const USD_TO_PKR = 278.50;
-
-      let liveUsd = 5494.51;
-      if (cachedAutoData && cachedAutoData.summary && cachedAutoData.summary.total_equity_usd) {
-        liveUsd = cachedAutoData.summary.total_equity_usd;
-      }
-      let capital = simStartMode === 'live' ? liveUsd : (20000 / USD_TO_QAR);
-
-      const monthlyDepositUsd = monthlyQar / USD_TO_QAR;
-      const m6InjectionUsd = 1500000 / USD_TO_PKR; // ~5,385.99 USD (15 Lakh PKR)
-      const m12InjectionUsd = 10000000 / USD_TO_PKR; // ~35,906.64 USD (1 Crore PKR)
-
+      let capital = startCapitalUsd;
       const schedule = [];
 
       for (let m = 1; m <= 24; m++) {
@@ -1676,11 +1703,11 @@
 
         if (m === 6 && includeM6) {
           lumpInjection = m6InjectionUsd;
-          milestoneTag = '⚡ +15L PKR';
+          milestoneTag = `⚡ +${m6Lakh}L PKR`;
         }
         if (m === 12 && includeM12) {
           lumpInjection = m12InjectionUsd;
-          milestoneTag = '🏆 +1Cr PKR';
+          milestoneTag = `🏆 +${m12Crore}Cr PKR`;
         }
 
         const baseForProfit = startEq + monthlyDepositUsd + lumpInjection;
@@ -2264,11 +2291,30 @@
       const sysWrEl = document.getElementById('forecast-sys-wr');
       if (sysWrEl) sysWrEl.textContent = `${(sum.system_win_rate || 0).toFixed(1)}%`;
 
-      const actSign = (sum.actual_total_pnl || 0) >= 0 ? '+' : '';
+      const realPnl = sum.actual_realized_pnl !== undefined ? sum.actual_realized_pnl : (sum.actual_total_pnl || 0);
+      const floatPnl = sum.actual_unrealized_pnl !== undefined ? sum.actual_unrealized_pnl : 0;
+      const realSign = realPnl >= 0 ? '+' : '';
+      const floatSign = floatPnl >= 0 ? '+' : '';
+
       const actPnlEl = document.getElementById('forecast-act-pnl');
-      if (actPnlEl) actPnlEl.textContent = `${actSign}$${(sum.actual_total_pnl || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+      if (actPnlEl) {
+        actPnlEl.textContent = `${realSign}$${realPnl.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+        actPnlEl.className = `text-2xl font-extrabold mono ${realPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      }
+
       const actRetEl = document.getElementById('forecast-act-ret');
-      if (actRetEl) actRetEl.textContent = `${actSign}${(sum.actual_return_pct || 0).toFixed(1)}%`;
+      if (actRetEl) {
+        const retPct = (sum.total_capital && sum.total_capital > 0) ? (realPnl / sum.total_capital * 100.0) : (sum.actual_return_pct || 0);
+        actRetEl.textContent = `${retPct >= 0 ? '+' : ''}${retPct.toFixed(1)}%`;
+        actRetEl.className = `text-xs font-bold mono ${retPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      }
+
+      const actFloatEl = document.getElementById('forecast-act-floating');
+      if (actFloatEl) {
+        actFloatEl.textContent = `${floatSign}$${floatPnl.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+        actFloatEl.className = `text-2xl font-extrabold mono ${floatPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      }
+
       const actTrEl = document.getElementById('forecast-act-trades');
       if (actTrEl) actTrEl.textContent = sum.actual_trades_count || 0;
       const actWrEl = document.getElementById('forecast-act-wr');
