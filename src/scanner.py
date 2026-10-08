@@ -16,6 +16,7 @@ Run daily after market close:
 from __future__ import annotations
 
 import argparse
+import json
 from datetime import date
 import pandas as pd
 import numpy as np
@@ -168,14 +169,29 @@ def run_daily_scan(refresh: bool = False, min_rr: float = 1.5):
             })
         elif stage2 and (rs_63 > 0):
             dist_to_ema20 = (cur_c - ema20) / cur_c * 100.0
+            dist_to_ema10 = (cur_c - ema10) / cur_c * 100.0
             watch_candidates.append({
                 "ticker": ticker,
+                "note": getattr(c, "note", "") or "",
                 "segment": c.segment_label,
-                "price": cur_c,
-                "dist_ema20": dist_to_ema20,
-                "rs_63": rs_63 * 100.0,
+                "tier": tier,
+                "price": round(float(cur_c), 2),
+                "dist_ema20": round(float(dist_to_ema20), 1),
+                "dist_ema10": round(float(dist_to_ema10), 1),
+                "rs_63": round(float(rs_63 * 100.0), 1),
                 "bench": bench_sym,
+                "sma50": round(float(sma50), 2),
+                "sma200": round(float(sma200), 2),
             })
+
+    # Save Stage 2 Watchlist candidates to database
+    if watch_candidates:
+        sorted_watch = sorted(watch_candidates, key=lambda x: x["dist_ema20"])
+        records.set_setting("stage2_watchlist", json.dumps({
+            "scan_date": str(data_date),
+            "candidates": sorted_watch,
+            "count": len(sorted_watch),
+        }))
 
     # Layer 2: Setup Prioritization (Rank by Relative Strength vs Benchmark)
     if setups:

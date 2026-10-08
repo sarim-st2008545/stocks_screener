@@ -201,6 +201,16 @@ class PortalRequestHandler(BaseHTTPRequestHandler):
             self.send_json(analytics)
             return
 
+        elif path == "/api/watchlist":
+            query_params = parse_qs(parsed.query)
+            refresh = query_params.get("refresh", ["0"])[0] == "1"
+            if refresh:
+                from src.scanner import run_daily_scan
+                run_daily_scan()
+            watchlist = records.get_stage2_watchlist()
+            self.send_json(watchlist)
+            return
+
         elif path == "/api/prices":
             prices = get_latest_cached_prices()
             self.send_json(prices)

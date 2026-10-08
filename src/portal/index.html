@@ -472,36 +472,39 @@
 
         </div>
 
-        <!-- Executed Trades & Realized Profits Table -->
+        <!-- Stage 2 Leaders Watchlist Table -->
         <div class="glass-card rounded-xl overflow-hidden shadow-xl space-y-3">
-          <div class="px-6 py-4 border-b border-border bg-card/40 flex items-center justify-between">
+          <div class="px-6 py-4 border-b border-border bg-card/40 flex flex-wrap items-center justify-between gap-3">
             <div>
               <div class="flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-                <h3 class="text-xs font-bold text-white uppercase tracking-wider">My Executed Trades & Realized Profits</h3>
+                <span class="text-base">👀</span>
+                <h3 class="text-xs font-bold text-white uppercase tracking-wider">Stage 2 Leaders Watchlist</h3>
+                <span id="watchlist-count-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-950 text-purple-300 border border-purple-800 mono">0 Candidates</span>
               </div>
-              <p class="text-xs text-slate-400 mt-0.5">Your personal trades calculated by your actual shares bought and verified exits.</p>
+              <p class="text-xs text-slate-400 mt-0.5">High-momentum market leaders in Minervini Stage 2 uptrends building bases near 10-EMA & 20-EMA support (Pre-trigger pipeline).</p>
             </div>
-            <button onclick="openNewTradeModal()" class="px-3 py-1.5 rounded-lg bg-cyan-600/30 hover:bg-cyan-600 text-cyan-300 hover:text-white border border-cyan-500/40 text-xs font-bold transition-all shadow cursor-pointer">
-              + Log New Trade
-            </button>
+            <div class="flex items-center gap-3">
+              <span id="watchlist-date-badge" class="text-[11px] text-slate-500 mono">Live Daily Scan</span>
+              <button onclick="loadWatchlist(true)" title="Re-scan and refresh watchlist" class="px-2.5 py-1 rounded-lg bg-surface hover:bg-card text-slate-400 hover:text-white border border-border text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
+                <span>↻ Refresh</span>
+              </button>
+            </div>
           </div>
           <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
               <thead>
                 <tr class="border-b border-border/80 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-card/20">
-                  <th class="py-3 px-6">Ticker / Sleeve</th>
-                  <th class="py-3 px-4">Shares Bought</th>
-                  <th class="py-3 px-4">Cost Basis</th>
-                  <th class="py-3 px-4">Entry Date / Price</th>
-                  <th class="py-3 px-4">Live / Exit Price</th>
-                  <th class="py-3 px-4">Status</th>
-                  <th class="py-3 px-6 text-right">Profit / Loss</th>
-                  <th class="py-3 px-5 text-right">Action</th>
+                  <th class="py-3 px-6">Ticker / Thesis</th>
+                  <th class="py-3 px-4">Segment / Tier</th>
+                  <th class="py-3 px-4">Market Close</th>
+                  <th class="py-3 px-4">Distance to 20-EMA</th>
+                  <th class="py-3 px-4">63d Relative Strength</th>
+                  <th class="py-3 px-4">Support Alignment</th>
+                  <th class="py-3 px-6 text-right">Setup Pipeline Status</th>
                 </tr>
               </thead>
-              <tbody id="forecast-executions-tbody" class="divide-y divide-border/60 text-xs">
-                <!-- Dynamically populated from data.executions -->
+              <tbody id="stage2-watchlist-tbody" class="divide-y divide-border/60 text-xs">
+                <!-- Dynamically populated from watchlist data -->
               </tbody>
             </table>
           </div>
@@ -2369,71 +2372,11 @@
       const p1yEl = document.getElementById('proj-1yr');
       if (p1yEl) p1yEl.textContent = `+$${(fc.forecast_1yr_pnl || 0).toLocaleString('en-US', {minimumFractionDigits: 0})}`;
 
-      // My Executions Table
-      const exTbody = document.getElementById('forecast-executions-tbody');
-      if (exTbody) {
-        const execs = data.executions || [];
-        if (execs.length === 0) {
-          exTbody.innerHTML = `
-            <tr>
-              <td colspan="8" class="text-center py-10 text-slate-500">
-                <div class="text-sm font-medium text-slate-400">No executed trades logged yet</div>
-                <div class="text-xs text-slate-600 mt-1">Click "+ Take Trade" on any setup to log your actual shares bought</div>
-              </td>
-            </tr>
-          `;
-        } else {
-          exTbody.innerHTML = execs.map(t => {
-            const isClosed = t.status === 'CLOSED';
-            const pnl = t.pnl_amount !== null && t.pnl_amount !== undefined ? Number(t.pnl_amount) : 0.0;
-            const pnlPct = t.pnl_pct !== null && t.pnl_pct !== undefined ? Number(t.pnl_pct) : 0.0;
-            const isWin = pnl >= 0;
-            const pnlColor = isWin ? 'text-emerald-400' : 'text-rose-400';
-            const pnlSign = isWin ? '+' : '';
-            const statusBadge = isClosed 
-              ? '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-300 border border-slate-700 font-mono">CLOSED</span>'
-              : '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-blue-950 text-blue-300 border border-blue-800 font-mono">ACTIVE LIVE</span>';
-            const exitOrLiveLabel = isClosed ? `$${Number(t.exit_price || t.entry_price).toFixed(2)} (Exit)` : `$${Number(t.current_price || t.entry_price).toFixed(2)} (Live)`;
-
-            const actionBtn = !isClosed ? `
-              <button onclick="openExitModal(${t.id})" class="px-2.5 py-1 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-700/60 text-[10px] font-bold transition-all cursor-pointer">
-                Close
-              </button>
-            ` : '<span class="text-[10px] text-slate-500">Realized</span>';
-
-            return `
-              <tr class="hover:bg-surface/60 transition-colors">
-                <td class="py-3 px-6">
-                  <span class="font-extrabold text-white mono text-sm">${t.ticker}</span>
-                  <span class="text-[10px] text-slate-500 ml-1.5 uppercase mono">${t.system}</span>
-                </td>
-                <td class="py-3 px-4 mono font-bold text-white">
-                  ${t.shares} <span class="text-[10px] font-normal text-slate-400">sh</span>
-                </td>
-                <td class="py-3 px-4 mono text-slate-300">
-                  $${(Number(t.cost_basis) || (t.shares * t.entry_price)).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                </td>
-                <td class="py-3 px-4 mono text-xs">
-                  <div class="text-white font-semibold">$${Number(t.entry_price).toFixed(2)}</div>
-                  <div class="text-slate-500 text-[10px]">${t.entry_date}</div>
-                </td>
-                <td class="py-3 px-4 mono text-xs">
-                  <div class="text-white font-semibold">${exitOrLiveLabel}</div>
-                </td>
-                <td class="py-3 px-4">
-                  ${statusBadge}
-                </td>
-                <td class="py-3 px-6 text-right mono">
-                  <div class="${pnlColor} font-bold text-sm">${pnlSign}$${pnl.toFixed(2)}</div>
-                  <div class="${pnlColor} text-[11px]">${pnlSign}${pnlPct.toFixed(2)}%</div>
-                </td>
-                <td class="py-3 px-5 text-right">
-                  ${actionBtn}
-                </td>
-              </tr>
-            `;
-          }).join('');
-        }
+      // Render Stage 2 Leaders Watchlist Feed
+      if (data.watchlist) {
+        renderWatchlistFeed(data.watchlist);
+      } else {
+        loadWatchlist();
       }
 
       const wTbody = document.getElementById('weekly-breakdown-tbody');
@@ -2495,6 +2438,99 @@
         renderForecastFeed(data);
       } catch (err) {
         console.error('Failed to load forecast analytics:', err);
+      }
+    }
+
+    function renderWatchlistFeed(watchlistData) {
+      const tbody = document.getElementById('stage2-watchlist-tbody');
+      const countBadge = document.getElementById('watchlist-count-badge');
+      const dateBadge = document.getElementById('watchlist-date-badge');
+      if (!tbody) return;
+
+      const candidates = (watchlistData && watchlistData.candidates) ? watchlistData.candidates : [];
+      if (countBadge) countBadge.textContent = `${candidates.length} Candidate${candidates.length === 1 ? '' : 's'}`;
+      if (dateBadge && watchlistData && watchlistData.scan_date) {
+        dateBadge.textContent = `As of ${watchlistData.scan_date}`;
+      }
+
+      if (candidates.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="text-center py-12 text-slate-500">
+              <div class="text-sm font-medium text-slate-400">No Stage 2 candidates on watchlist</div>
+              <div class="text-xs text-slate-600 mt-1">Run daily scanner to scan Universe tickers for Stage 2 momentum bases.</div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = candidates.map(w => {
+        const dist = Number(w.dist_ema20 || 0);
+        const isAtBase = Math.abs(dist) <= 2.5;
+        const isPullingBack = dist > 2.5 && dist <= 5.0;
+        
+        let distBadge = '';
+        let pipelineStatus = '';
+        if (isAtBase) {
+          distBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800 mono tracking-wide inline-flex items-center gap-1 shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>+${dist.toFixed(1)}% (AT BASE)</span>`;
+          pipelineStatus = `<span class="px-2.5 py-1 rounded-lg bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 text-[11px] font-bold inline-flex items-center gap-1 shadow">⚡ Imminent Trigger Watch</span>`;
+        } else if (isPullingBack) {
+          distBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-800 mono inline-flex items-center gap-1">+${dist.toFixed(1)}% (PULLING BACK)</span>`;
+          pipelineStatus = `<span class="px-2.5 py-1 rounded-lg bg-cyan-950/60 text-cyan-300 border border-cyan-800/60 text-[11px] font-medium inline-flex items-center gap-1">👀 Approaching 20-EMA</span>`;
+        } else {
+          distBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-400 border border-slate-700 mono">+${dist.toFixed(1)}%</span>`;
+          pipelineStatus = `<span class="text-slate-500 text-[11px] mono">Building Base Structure</span>`;
+        }
+
+        const tierBadge = w.tier === 'Flagged/High-Beta'
+          ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-950/80 text-amber-400 border border-amber-800/60 mono">High-Beta</span>`
+          : `<span class="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-slate-800 text-slate-400 border border-slate-700 mono">Core</span>`;
+
+        return `
+          <tr class="hover:bg-surface/60 transition-colors">
+            <td class="py-3.5 px-6">
+              <div class="flex items-center gap-2">
+                <span class="font-extrabold text-white mono text-sm">${w.ticker}</span>
+                ${tierBadge}
+              </div>
+              <div class="text-[10px] text-slate-400 truncate max-w-[220px] mt-0.5">${w.note || w.segment}</div>
+            </td>
+            <td class="py-3.5 px-4">
+              <span class="text-xs text-slate-300 font-medium">${w.segment}</span>
+            </td>
+            <td class="py-3.5 px-4 mono text-white font-bold">
+              $${Number(w.price).toFixed(2)}
+            </td>
+            <td class="py-3.5 px-4">
+              ${distBadge}
+            </td>
+            <td class="py-3.5 px-4 mono">
+              <div class="text-emerald-400 font-bold">+${Number(w.rs_63).toFixed(1)}%</div>
+              <div class="text-[10px] text-slate-500">vs ${w.bench}</div>
+            </td>
+            <td class="py-3.5 px-4 mono text-xs text-slate-400">
+              <div>50-DMA: $${Number(w.sma50 || 0).toFixed(2)}</div>
+              <div class="text-[10px] text-slate-500">200-DMA: $${Number(w.sma200 || 0).toFixed(2)}</div>
+            </td>
+            <td class="py-3.5 px-6 text-right">
+              ${pipelineStatus}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function loadWatchlist(forceRefresh = false) {
+      try {
+        const url = forceRefresh ? '/api/watchlist?refresh=1' : '/api/watchlist';
+        const res = await fetch(url);
+        if (res.ok) {
+          const wData = await res.json();
+          renderWatchlistFeed(wData);
+        }
+      } catch (e) {
+        console.error('Failed to load watchlist:', e);
       }
     }
 

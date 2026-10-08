@@ -113,6 +113,25 @@ def set_setting(key: str, value: str, db_path: Optional[Path] = None):
     conn.close()
 
 
+def get_stage2_watchlist(db_path: Optional[Path] = None) -> dict[str, Any]:
+    """Retrieves the latest Stage 2 Watchlist candidates building bases."""
+    raw = get_setting("stage2_watchlist", "", db_path=db_path)
+    if raw:
+        try:
+            return json.loads(raw)
+        except Exception:
+            pass
+    try:
+        from src.scanner import run_daily_scan
+        run_daily_scan()
+        raw = get_setting("stage2_watchlist", "", db_path=db_path)
+        if raw:
+            return json.loads(raw)
+    except Exception:
+        pass
+    return {"scan_date": "", "candidates": [], "count": 0}
+
+
 def record_scanner_signals(
     system: str,
     setups: list[dict[str, Any]],
@@ -1127,4 +1146,5 @@ def get_analytics_and_forecast(
         "weekly": weekly_list,
         "monthly": monthly_list,
         "executions": all_trades,
+        "watchlist": get_stage2_watchlist(db_path=db_path),
     }
