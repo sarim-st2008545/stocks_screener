@@ -17,6 +17,7 @@ import argparse
 import json
 import os
 import sys
+import threading
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -438,6 +439,8 @@ class PortalRequestHandler(BaseHTTPRequestHandler):
 
 def run_server(host: str = "127.0.0.1", port: int = 8080):
     records.init_db()
+    # Pre-warm prices cache asynchronously so the first user page-load is instantaneous
+    threading.Thread(target=get_latest_cached_prices, kwargs={"force_refresh": True}, daemon=True).start()
     server_address = (host, port)
     httpd = ThreadingHTTPServer(server_address, PortalRequestHandler)
     print(f"\n{'=' * 78}")
